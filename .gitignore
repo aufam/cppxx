@@ -1,0 +1,10 @@
+/*[Bb]uild*
+/*[Dd]ebug*
+/*[Rr]elease*
+__pycache__
+
+.*
+!.gitignore
+!.gitmodules
+!.gitlab-ci.yml
+compile_commands.json

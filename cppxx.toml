@@ -1,0 +1,60 @@
+[workspace]
+title = "cppxx"
+version = "v0.1.0"
+author = "aufam"
+
+
+[project.cppxx]
+type = "executable"
+sources = ["cmd/*.cpp"]
+depends_on = ["core"]
+
+
+[project.core]
+sources = ["src/*.cpp"]
+flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
+include_dirs = ["include/"]
+depends_on = ["preprocessor", "fmt", "json", "toml"]
+
+
+[project.test]
+type = "executable"
+depends_on = ["core"]
+
+
+[project.preprocessor]
+git.url = "boostorg/preprocessor"
+git.tag = "boost-1.88.0"
+include_dirs = ["include/"]
+
+
+[project.fmt]
+git.url = "fmtlib/fmt"
+git.tag = "11.2.0"
+include_dirs = ["include/"]
+flags = ["-DFMT_HEADER_ONLY=1"]
+
+
+[project.cxxopts]
+git.url = "jarro2783/cxxopts"
+git.tag = "v3.3.1"
+include_dirs = ["include/"]
+
+
+[project.toml]
+git.url = "marzer/tomlplusplus"
+git.tag = "v3.4.0"
+include_dirs = [""]
+
+
+[project.json]
+git.url = "nlohmann/json"
+git.tag = "v3.12.0"
+include_dirs = ["single_include/"]
+
+
+[project.googletest]
+git.url = "google/googletest"
+git.tag = "v1.17.0"
+sources = ["googletest/src/*.cc"]
+include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
