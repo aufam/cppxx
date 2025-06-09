@@ -1,0 +1,16 @@
+﻿{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "debug",
+            "displayName": "debug",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CPM_USE_LOCAL_PACKAGES": "OFF"
+            }
+        }
+    ]
+}

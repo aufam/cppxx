@@ -7,7 +7,7 @@ author = "aufam"
 [project.cppxx]
 type = "executable"
 sources = ["cmd/*.cpp"]
-depends_on = ["core"]
+depends_on = ["core", "cxxopts"]
 
 
 [project.core]
@@ -15,11 +15,13 @@ sources = ["src/*.cpp"]
 flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
 include_dirs = ["include/"]
 depends_on = ["preprocessor", "fmt", "json", "toml"]
+link_flags = ["-lssl", "-lcrypto"]
 
 
 [project.test]
 type = "executable"
-depends_on = ["core"]
+sources = ["tests/*.cpp"]
+depends_on = ["core", "googletest"]
 
 
 [project.preprocessor]
@@ -58,3 +60,4 @@ git.url = "google/googletest"
 git.tag = "v1.17.0"
 sources = ["googletest/src/*.cc"]
 include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
+link_flags = ["-lssl", "-lcrypto"]

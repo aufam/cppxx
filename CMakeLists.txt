@@ -73,6 +73,8 @@ target_link_libraries(cppxx PRIVATE
 
 target_link_libraries(cppxx PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
+target_compile_features(cppxx PUBLIC cxx_std_23)
+
 file(GLOB_RECURSE CMD_SOURCES cmd/*)
 add_executable(cmd ${CMD_SOURCES})
 target_link_libraries(cmd PRIVATE
