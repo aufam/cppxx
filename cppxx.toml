@@ -58,6 +58,6 @@ include_dirs = ["single_include/"]
 [project.googletest]
 git.url = "google/googletest"
 git.tag = "v1.17.0"
-sources = ["googletest/src/*.cc"]
+sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
 include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
 link_flags = ["-lssl", "-lcrypto"]

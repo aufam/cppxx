@@ -13,6 +13,7 @@ auto Workspace::parse(std::string root_dir, std::string mode) -> Workspace {
         throw std::runtime_error("CPPXX_CACHE is not specified");
 
     w.cppxx_cache = fs::weakly_canonical(w.cppxx_cache).string();
+    w.root_dir = fs::weakly_canonical(root_dir).string();
 
     auto config = toml::parse_file(root_dir + "cppxx.toml");
 
@@ -160,8 +161,7 @@ auto Workspace::parse(std::string root_dir, std::string mode) -> Workspace {
         w.resolve_dependencies(name, visited, stack);
     }
 
-    w.generate_compile_commands(mode);
-    w.configure();
+    w.populate_compile_commands(mode);
 
     return w;
 }

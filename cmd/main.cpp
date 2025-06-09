@@ -1,18 +1,52 @@
 #include <fmt/ranges.h>
+#include <cppxx/iterator.h>
 #include "cli.h"
 #include "workspace.h"
 
 
-int main(int argc, char**argv) {
-    std::string name;
+int main(int argc, char **argv) {
+    std::vector<std::string> targets;
+    std::string out;
+    std::string mode;
+    bool clear;
+    bool cc;
+    bool info;
 
     Option opts;
-    opts.add_option(name, 'n', "name", "name", std::nullopt, true);
-    opts.parse("cppxx", argc, argv);
+    opts.add_option(targets, 't', "targets", "Specify target", "", true)
+        .add_option(out, 'o', "out", "Specify output file", "")
+        .add_option(mode, 'm', "mode", "Specify build mode. \"debug\" or \"release\"", "debug")
+        .add_option(clear, 'c', "clear", "Specify targets to clear", "false")
+        .add_option(cc, 'g', "compile-commands", "Generate \"compile_commands.json\"", "false")
+        .add_option(info, 'i', "info", "Print workspace info as json", "false")
+        .parse("cppxx", argc, argv);
 
+    targets =
+        targets | cppxx::filter([](std::string &target) { return not target.empty(); }) | cppxx::collect<std::vector>();
+
+    const std::string root_dir = "";
     try {
-        auto w = Workspace::parse();
-        w.build(name);
+        const auto w = Workspace::parse(root_dir, mode);
+        if (cc) {
+            w.generate_compile_commands_json();
+        } else if (info) {
+            w.print_info();
+        } else if (clear) {
+            for (auto &target : targets)
+                w.clear(target);
+        } else if (not out.empty()) {
+            if (targets.size() == 0)
+                throw std::runtime_error("no target specified");
+            if (targets.size() > 1)
+                throw std::runtime_error("multiple targets are not allowed when output is specified");
+
+            w.configure();
+            w.build(targets.front(), out.empty() ? targets.front() : out);
+        } else {
+            w.configure();
+            for (auto &target : targets)
+                w.build(target, target);
+        }
     } catch (const std::exception &e) {
         fmt::println(stderr, "{}", e.what());
         return 1;

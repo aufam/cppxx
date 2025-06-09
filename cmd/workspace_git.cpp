@@ -55,15 +55,15 @@ auto Workspace::populate_git(const toml::node &node, const std::string &key) -> 
 
     const std::string url = normalize_git_url(expand_variables(node.as_table()->at("url").value_or("")));
     const std::string tag = expand_variables(node.as_table()->at("tag").value_or(""));
+    const std::string host_and_path = extract_host_and_path(url);
 
-    const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, extract_host_and_path(url), tag);
+    const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, host_and_path, tag);
     if (fs::exists(target_path)) {
-        fmt::println(stderr, "[INFO] git repo {}/{} already cloned at {}", url, tag, target_path);
         return target_path;
     }
 
+    fmt::println(stderr, "[INFO] cloning {}@{}", host_and_path, tag);
     const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, target_path);
-    fmt::println(stderr, "[INFO] executing `{}`", cmd);
     if (std::system(cmd.c_str()) != 0)
         throw std::runtime_error(fmt::format("Failed to clone repo from {}", url));
 

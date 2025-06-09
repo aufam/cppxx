@@ -6,7 +6,7 @@
 namespace fs = std::filesystem;
 
 
-void Workspace::generate_compile_commands(const std::string &mode) {
+void Workspace::populate_compile_commands(const std::string &mode) {
     const std::unordered_map<std::string, std::string> mode_map = {
         {"debug",   "-g -fsanitize=address,undefined"},
         {"release", "-O3 -DNDEBUG"                   }
@@ -48,7 +48,7 @@ void Workspace::generate_compile_commands(const std::string &mode) {
     }
 }
 
-auto Workspace::generate_compile_commands_json() const -> std::string {
+void Workspace::generate_compile_commands_json() const {
     nlohmann::json j;
     for (const auto &[_, project] : projects) {
         for (const auto &cc : project.compile_commands) {
@@ -61,7 +61,8 @@ auto Workspace::generate_compile_commands_json() const -> std::string {
         }
     }
 
-    return j.dump(2);
+    std::ofstream out("compile_commands.json");
+    out << j.dump(2);
 }
 
 auto Workspace::CompileCommand::abs_output() const -> std::string { return (fs::path(directory) / fs::path(output)).string(); }

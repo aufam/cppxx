@@ -22,9 +22,10 @@ void Workspace::configure() const {
         }
     }
 
+    // TODO: multi thread
     for (size_t i = 1; i <= all.size(); ++i) {
         const auto &cc = all[i - 1];
-        fmt::println(stderr, "[{}/{}] {}", i, all.size(), cc.command);
+        fmt::println(stderr, "[INFO] [{}/{}] compiling {:?}", i, all.size(), cc.file);
 
         fs::create_directories(fs::path(cc.abs_output()).parent_path());
         int status = std::system(("cd " + cc.directory + " && " + cc.command).c_str());

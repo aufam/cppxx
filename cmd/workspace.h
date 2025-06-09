@@ -4,7 +4,7 @@
 
 
 struct Workspace {
-    std::string cppxx_cache, title, version, author, compiler = "c++";
+    std::string root_dir, cppxx_cache, title, version, author, compiler = "c++";
     int standard = 23;
     std::unordered_map<std::string, std::string> vars;
 
@@ -32,8 +32,10 @@ struct Workspace {
 
     static auto parse(std::string root_dir = "", std::string mode = "debug") -> Workspace;
     void configure() const;
-    auto generate_compile_commands_json() const -> std::string;
-    void build(const std::string& name) const;
+    void build(const std::string &target, const std::string &out) const;
+    void clear(const std::string &target) const;
+    void generate_compile_commands_json() const;
+    void print_info() const;
 
 protected:
     auto expand_variables(const std::string &input) const -> std::string;
@@ -50,9 +52,11 @@ protected:
 
     auto populate_git(const toml::node &node, const std::string &key) -> std::string;
 
-    void resolve_dependencies(const std::string &name, std::unordered_set<std::string> &visited, std::vector<std::string> &stack);
+    void resolve_dependencies(const std::string &name,
+                              std::unordered_set<std::string> &visited,
+                              std::vector<std::string> &stack);
 
     static auto encrypt(const std::string &input, size_t length = 10) -> std::string;
 
-    void generate_compile_commands(const std::string &mode);
+    void populate_compile_commands(const std::string &mode);
 };

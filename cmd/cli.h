@@ -20,7 +20,7 @@ struct Option {
                        std::optional<std::string> default_value = std::nullopt,
                        bool is_positional = false);
 
-    std::string parse(const std::string &app_name, int argc, char **argv);
+    void parse(const std::string &app_name, int argc, char **argv) const;
 
 private:
     struct Cache {

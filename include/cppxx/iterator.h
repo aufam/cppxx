@@ -193,6 +193,14 @@ namespace cppxx {
     template <template <typename...> class Container>
     struct collect {
         template <std::ranges::input_range R>
+            requires (not tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>)
+        friend constexpr auto operator|(R &&r, const collect &) {
+            return Container<std::ranges::range_value_t<std::remove_reference_t<R>>>(
+                std::ranges::begin(r), std::ranges::end(r));
+        }
+
+        template <std::ranges::input_range R>
+            requires tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>
         friend constexpr auto operator|(R &&r, const collect &) {
             return expand_tuple_element_t<std::ranges::range_value_t<std::remove_reference_t<R>>, Container>(
                 std::ranges::begin(r), std::ranges::end(r));
