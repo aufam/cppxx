@@ -1,7 +1,7 @@
 # cppxx
 
 **cppxx** (C++ PlusPlus) is a lightweight, TOML-based build system for C++ projects.
-It aims to be simpler and more declarative than tools like CMake, while still supporting modern project features like external dependencies, per-target configuration, and flexible build modes.
+It aims to be simpler and more declarative, while still supporting modern project features like external dependencies, per-target configuration, and flexible build modes.
 
 ---
 
@@ -20,7 +20,7 @@ It aims to be simpler and more declarative than tools like CMake, while still su
 
 ## 🗂️ Project Structure
 
-Your workspace is defined in a single TOML file (usually `cppxx.toml`) like so:
+Your workspace is defined in the `cppxx.toml` file like so:
 
 ```toml
 [workspace]
