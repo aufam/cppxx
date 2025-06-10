@@ -51,12 +51,12 @@ protected:
     void assign_paths(const toml::node &node, const std::string &key, std::vector<std::string> &paths);
 
     auto populate_git(const toml::node &node, const std::string &key) -> std::string;
+    auto populate_archive(const toml::node &node, const std::string &key) -> std::string;
+    void populate_compile_commands();
 
     void resolve_dependencies(const std::string &name,
                               std::unordered_set<std::string> &visited,
                               std::vector<std::string> &stack);
 
     static auto encrypt(const std::string &input, size_t length = 10) -> std::string;
-
-    void populate_compile_commands();
 };

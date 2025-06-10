@@ -32,7 +32,7 @@ depends_on = ["core", "release"]
 [project.cppxx]
 type = "executable"
 sources = ["cmd/*.cpp"]
-depends_on = ["core_release", "cxxopts"]
+depends_on = ["core_${build_type:-release}", "cxxopts"]
 
 
 [project.test]
@@ -73,8 +73,7 @@ include_dirs = ["single_include/"]
 
 
 [project.googletest]
-git.url = "google/googletest"
-git.tag = "v1.17.0"
+archive = "https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz"
 sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
 include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
 link_flags = ["-lssl", "-lcrypto"]

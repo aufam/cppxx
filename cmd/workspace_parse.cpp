@@ -106,6 +106,8 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
                               depends_on);
             } else if (key == "git") {
                 base_path = w.populate_git(node, fmt::format("workspace.project.{}.git", std::string(name)));
+            } else if (key == "archive") {
+                base_path = w.populate_archive(node, fmt::format("workspace.project.{}.archive", std::string(name)));
             } else {
                 fmt::println(stderr, "[WARNING] unused key \"workspace.project.{}.{}\"", std::string(name), std::string(key));
             }

@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
                 w.build(target, target);
         }
     } catch (const std::exception &e) {
-        fmt::println(stderr, "{}", e.what());
+        fmt::println(stderr, "[ERROR] {}", e.what());
         return 1;
     }
 
