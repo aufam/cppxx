@@ -51,20 +51,20 @@ static std::string normalize_git_url(const std::string &url) {
 
 auto Workspace::populate_git(const toml::node &node, const std::string &key) -> std::string {
     if (not node.is_table() or not node.as_table()->contains("url") or not node.as_table()->contains("tag"))
-        throw std::runtime_error(fmt::format("\"{}\" must be a table containing \"url\" and \"tag\"", key));
+        throw std::runtime_error(fmt::format("{:?} must be a table containing \"url\" and \"tag\"", key));
 
     const std::string url = normalize_git_url(expand_variables(node.as_table()->at("url").value_or("")));
     const std::string tag = expand_variables(node.as_table()->at("tag").value_or(""));
-    const std::string host_and_path = extract_host_and_path(url);
+    const std::string host = extract_host_and_path(url);
 
-    const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, host_and_path, tag);
+    const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, host, tag);
     if (fs::exists(target_path))
         return target_path;
 
-    fmt::println(stderr, "[INFO] cloning {}@{}", host_and_path, tag);
+    fmt::println(stderr, "[INFO] cloning {}@{}", host, tag);
     const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, target_path);
-    if (std::system(cmd.c_str()) != 0)
-        throw std::runtime_error(fmt::format("Failed to clone repo from {}", url));
+    if (int res = std::system(cmd.c_str()); res != 0)
+        throw std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res));
 
     return target_path;
 }

@@ -27,7 +27,7 @@ static void collect_deps(const Workspace &w,
 void Workspace::build(const std::string &target, const std::string &out) const {
     auto it = projects.find(target);
     if (it == projects.end()) {
-        fmt::println(stderr, "[ERROR] project {:?} does not exist", target);
+        fmt::println(stderr, "[WARNING] project {:?} does not exist", target);
         return;
     }
 

@@ -7,13 +7,13 @@ namespace fs = std::filesystem;
 
 void Workspace::clear(const std::string &target) const {
     if (target.empty()) {
-        fmt::println(stderr, "[ERROR] target is not specified", target);
+        fmt::println(stderr, "[WARNING] target {:?} is not specified", target);
         return;
     }
 
     auto it = projects.find(target);
     if (it == projects.end()) {
-        fmt::println(stderr, "[ERROR] target {:?} does not exist", target);
+        fmt::println(stderr, "[WARNING] target {:?} does not exist", target);
         return;
     }
 
