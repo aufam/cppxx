@@ -37,10 +37,7 @@ void Workspace::build(const std::string &target, const std::string &out) const {
         return;
     }
 
-    std::unordered_set<std::string> deps,
-        flags = {
-            fmt::format("-std=c++{}", standard),
-        };
+    std::unordered_set<std::string> deps, flags;
     collect_deps(*this, deps, flags, target);
 
     if (deps.empty())
