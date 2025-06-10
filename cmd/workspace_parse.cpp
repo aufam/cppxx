@@ -5,7 +5,7 @@
 namespace fs = std::filesystem;
 
 
-auto Workspace::parse(std::string root_dir, std::string mode) -> Workspace {
+auto Workspace::parse(std::string root_dir) -> Workspace {
     auto w = Workspace{};
 
     w.cppxx_cache = std::getenv("CPPXX_CACHE");
@@ -161,7 +161,7 @@ auto Workspace::parse(std::string root_dir, std::string mode) -> Workspace {
         w.resolve_dependencies(name, visited, stack);
     }
 
-    w.populate_compile_commands(mode);
+    w.populate_compile_commands();
 
     return w;
 }

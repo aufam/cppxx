@@ -58,9 +58,8 @@ auto Workspace::populate_git(const toml::node &node, const std::string &key) -> 
     const std::string host_and_path = extract_host_and_path(url);
 
     const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, host_and_path, tag);
-    if (fs::exists(target_path)) {
+    if (fs::exists(target_path))
         return target_path;
-    }
 
     fmt::println(stderr, "[INFO] cloning {}@{}", host_and_path, tag);
     const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, target_path);

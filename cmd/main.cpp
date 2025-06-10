@@ -7,26 +7,21 @@
 int main(int argc, char **argv) {
     std::vector<std::string> targets;
     std::string out;
-    std::string mode;
-    bool clear;
-    bool cc;
-    bool info;
+    bool clear, cc, info;
 
     Option opts;
-    opts.add_option(targets, 't', "targets", "Specify target", "", true)
-        .add_option(out, 'o', "out", "Specify output file", "")
-        .add_option(mode, 'm', "mode", "Specify build mode. \"debug\" or \"release\"", "debug")
-        .add_option(clear, 'c', "clear", "Specify targets to clear", "false")
-        .add_option(cc, 'g', "compile-commands", "Generate \"compile_commands.json\"", "false")
-        .add_option(info, 'i', "info", "Print workspace info as json", "false")
+    opts.add_option(targets, 't', "targets",          "Specify target",                     "", true)
+        .add_option(out,     'o', "out",              "Specify output file",                "")
+        .add_option(clear,   'c', "clear",            "Specify targets to clear",           "false")
+        .add_option(cc,      'g', "compile-commands", "Generate \"compile_commands.json\"", "false")
+        .add_option(info,    'i', "info",             "Print workspace info as json",       "false")
         .parse("cppxx", argc, argv);
 
-    targets =
-        targets | cppxx::filter([](std::string &target) { return not target.empty(); }) | cppxx::collect<std::vector>();
+    targets = targets | cppxx::filter([](std::string &target) { return not target.empty(); }) | cppxx::collect<std::vector>();
 
     const std::string root_dir = "";
     try {
-        const auto w = Workspace::parse(root_dir, mode);
+        const auto w = Workspace::parse(root_dir);
         if (cc) {
             w.generate_compile_commands_json();
         } else if (info) {

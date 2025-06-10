@@ -6,42 +6,36 @@
 namespace fs = std::filesystem;
 
 
-void Workspace::populate_compile_commands(const std::string &mode) {
-    const std::unordered_map<std::string, std::string> mode_map = {
-        {"debug",   "-g -fsanitize=address,undefined"},
-        {"release", "-O3 -DNDEBUG"                   }
-    };
-
-    if (not mode_map.contains(mode))
-        throw std::runtime_error("Unknown build mode");
-
-    fs::path cppxx_cache = this->cppxx_cache;
+void Workspace::populate_compile_commands() {
+    fs::path cache_path = cppxx_cache;
     for (auto &[_, project] : projects) {
         const fs::path base_path = project.base_path;
         for (auto &src : project.sources) {
-            std::vector<std::string> flags;
+            std::unordered_set<std::string> flags{
+                fmt::format("-std=c++{}", standard),
+            };
+
             for (auto dir : project.private_include_dirs)
-                flags.push_back("-I" + dir);
+                flags.emplace("-I" + dir);
             for (auto dir : project.public_include_dirs)
-                flags.push_back("-I" + dir);
+                flags.emplace("-I" + dir);
 
             for (auto flag : project.private_flags)
-                flags.push_back(flag);
+                flags.emplace(flag);
             for (auto flag : project.public_flags)
-                flags.push_back(flag);
+                flags.emplace(flag);
 
-            const std::string command = fmt::format("{} -std=c++{} {}", compiler, standard, fmt::join(flags, " "));
+            const std::string command = fmt::format("{} {}", compiler, fmt::join(flags, " "));
             const fs::path file = base_path / src;
 
             CompileCommand cc;
             cc.file = file.string();
             cc.output = src + ".o";
 
-            cc.directory =
-                (cc.file.starts_with(this->cppxx_cache) ? base_path / ".cppxx" / mode / encrypt(command)
-                                                        : cppxx_cache / "build" / mode / title / version / encrypt(command))
-                    .string();
-            cc.command = fmt::format("{} {} -o {} -c {}", command, mode_map.at(mode), cc.output, cc.file);
+            cc.directory = (cc.file.starts_with(cppxx_cache) ? base_path / ".cppxx" / encrypt(command)
+                                                             : cache_path / "build" / title / version / encrypt(command))
+                               .string();
+            cc.command = fmt::format("{} -o {} -c {}", command, cc.output, cc.file);
 
             project.compile_commands.push_back(std::move(cc));
         }

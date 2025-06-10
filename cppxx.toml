@@ -4,10 +4,13 @@ version = "v0.1.0"
 author = "aufam"
 
 
-[project.cppxx]
-type = "executable"
-sources = ["cmd/*.cpp"]
-depends_on = ["core", "cxxopts"]
+[project.debug]
+flags = ["-g", "-fsanitize=address,undefined"]
+link_flags = ["-fsanitize=address,undefined"]
+
+
+[project.release]
+flags = ["-O3", "-DNDEBUG"]
 
 
 [project.core]
@@ -18,10 +21,24 @@ depends_on = ["preprocessor", "fmt", "json", "toml"]
 link_flags = ["-lssl", "-lcrypto"]
 
 
+[project.core_debug]
+depends_on = ["core", "debug"]
+
+
+[project.core_release]
+depends_on = ["core", "release"]
+
+
+[project.cppxx]
+type = "executable"
+sources = ["cmd/*.cpp"]
+depends_on = ["core_release", "cxxopts"]
+
+
 [project.test]
 type = "executable"
 sources = ["tests/*.cpp"]
-depends_on = ["core", "googletest"]
+depends_on = ["core_debug", "googletest"]
 
 
 [project.preprocessor]
@@ -61,3 +78,4 @@ git.tag = "v1.17.0"
 sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
 include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
 link_flags = ["-lssl", "-lcrypto"]
+depends_on = ["debug"]

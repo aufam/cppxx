@@ -24,9 +24,9 @@ Your workspace is defined in the `cppxx.toml` file like so:
 
 ```toml
 [workspace]
-title = "cppxx"
-version = "v0.1.0"
-author = "aufam"
+title = "cppxx"     # mandatory
+version = "v0.1.0"  # mandatory
+author = "aufam"    # optional
 ````
 
 ### 📁 Projects
@@ -118,7 +118,6 @@ cppxx [OPTIONS...] [targets]
 | ----- | -------------------- | ----------------------------------------------------- |
 | `-t`  | `--targets`          | Specify target(s) to build                            |
 | `-o`  | `--out`              | Specify output file (only for single target)          |
-| `-m`  | `--mode`             | Set build mode: `debug` or `release` (default: debug) |
 | `-c`  | `--clear`            | Clear the specified targets                           |
 | `-g`  | `--compile-commands` | Generate `compile_commands.json`                      |
 | `-i`  | `--info`             | Print workspace info as JSON                          |

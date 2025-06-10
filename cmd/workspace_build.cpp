@@ -25,11 +25,6 @@ static void collect_deps(const Workspace &w,
 }
 
 void Workspace::build(const std::string &target, const std::string &out) const {
-    const std::unordered_map<std::string, std::string> mode_map = {
-        {"debug",   "-fsanitize=address,undefined"},
-        {"release", "-O3"                         }
-    };
-
     auto it = projects.find(target);
     if (it == projects.end()) {
         fmt::println(stderr, "[ERROR] project {:?} does not exist", target);
@@ -42,17 +37,17 @@ void Workspace::build(const std::string &target, const std::string &out) const {
         return;
     }
 
-    std::unordered_set<std::string> deps, flags;
+    std::unordered_set<std::string> deps,
+        flags = {
+            fmt::format("-std=c++{}", standard),
+        };
     collect_deps(*this, deps, flags, target);
 
-    auto cmd = fmt::format("{} -std=c++{} {} {} {} -o {}",
-                           compiler,
-                           standard,
-                           mode_map.at("debug"),
-                           fmt::join(deps, " "),
-                           fmt::join(flags, " "),
-                           out);
+    if (deps.empty())
+        throw std::runtime_error(fmt::format("Object files for target {:?} are empty", target));
+
+    auto cmd = fmt::format("{} {} {} -o {}", compiler, fmt::join(deps, " "), fmt::join(flags, " "), out);
     fmt::println(stderr, "[INFO] building {}", target);
-    if (std::system(cmd.c_str()) != 0)
-        throw std::runtime_error(fmt::format("Failed to build {}", target));
+    if (int res = std::system(cmd.c_str()); res != 0)
+        throw std::runtime_error(fmt::format("Failed to build {:?}. return code {}", target, res));
 }
