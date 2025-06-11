@@ -4,7 +4,7 @@
 
 
 struct Workspace {
-    std::string root_dir, cppxx_cache, title, version, author, compiler = "c++";
+    std::string title, version, author, compiler = "c++", linker;
     int standard = 23;
     std::unordered_map<std::string, std::string> vars;
 
@@ -38,6 +38,8 @@ struct Workspace {
     void print_info() const;
 
 protected:
+    std::string root_dir, cppxx_cache;
+
     auto expand_variables(const std::string &input) const -> std::string;
     static auto expand_path(const std::string &pattern) -> std::vector<std::string>;
 
@@ -45,13 +47,13 @@ protected:
     void assign_string(const toml::node &node, const std::string &key, std::string &value) const;
     void assign_list(const toml::node &node,
                      const std::string &key,
-                     std::vector<std::string> &private_values,
-                     std::vector<std::string> &public_values,
-                     std::vector<std::string> &unknown_values);
-    void assign_paths(const toml::node &node, const std::string &key, std::vector<std::string> &paths);
+                     std::vector<std::string> &values,
+                     std::vector<std::string> *public_values = nullptr,
+                     std::vector<std::string> *private_values = nullptr);
+    void assign_map(const toml::node &node, const std::string &key, std::unordered_map<std::string, std::string> &map);
 
     auto populate_git(const toml::node &node, const std::string &key) -> std::string;
-    auto populate_archive(const toml::node &node, const std::string &key) -> std::string;
+    auto populate_archive(const std::string& archive) -> std::string;
     void populate_compile_commands();
 
     void resolve_dependencies(const std::string &name,

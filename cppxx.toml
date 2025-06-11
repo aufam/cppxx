@@ -2,6 +2,9 @@
 title = "cppxx"
 version = "v0.1.0"
 author = "aufam"
+compiler = "c++"
+standard = 23
+vars = { gtest_version = "${gtest_version:-1.17.0}" }
 
 
 [project.debug]
@@ -13,32 +16,8 @@ link_flags = ["-fsanitize=address,undefined"]
 flags = ["-O3", "-DNDEBUG"]
 
 
-[project.core]
-sources = ["src/*.cpp"]
-flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
-include_dirs = ["include/"]
-depends_on = ["preprocessor", "fmt", "json", "toml"]
+[project.crypto]
 link_flags = ["-lssl", "-lcrypto"]
-
-
-[project.core_debug]
-depends_on = ["core", "debug"]
-
-
-[project.core_release]
-depends_on = ["core", "release"]
-
-
-[project.cppxx]
-type = "executable"
-sources = ["cmd/*.cpp"]
-depends_on = ["core_${build_type:-release}", "cxxopts"]
-
-
-[project.test]
-type = "executable"
-sources = ["tests/*.cpp"]
-depends_on = ["core_debug", "googletest"]
 
 
 [project.preprocessor]
@@ -73,8 +52,33 @@ include_dirs = ["single_include/"]
 
 
 [project.googletest]
-archive = "https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz"
-sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
-include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
-link_flags = ["-lssl", "-lcrypto"]
-depends_on = ["debug"]
+archive = "https://github.com/google/googletest/releases/download/v${gtest_version:-1.17.0}/googletest-${gtest_version:-1.17.0}.tar.gz"
+sources = ["googletest-${gtest_version}/googletest/src/gtest-all.cc", "googletest-${gtest_version}/googletest/src/gtest_main.cc"]
+include_dirs = { public = ["googletest-${gtest_version}/googletest/include/"], private = ["googletest-${gtest_version}/googletest/"] }
+
+
+[project.core]
+sources = ["src/*.cpp"]
+flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
+include_dirs = ["include/"]
+depends_on = ["preprocessor", "fmt", "json", "toml", "crypto"]
+
+
+[project.core_debug]
+depends_on = ["core", "debug"]
+
+
+[project.core_release]
+depends_on = ["core", "release"]
+
+
+[project.cppxx]
+type = "executable"
+sources = ["cmd/*.cpp"]
+depends_on = ["core_${build_type:-release}", "cxxopts"]
+
+
+[project.test]
+type = "executable"
+sources = ["tests/*.cpp"]
+depends_on = ["core_debug", "googletest"]

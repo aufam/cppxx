@@ -4,7 +4,7 @@
 
 
 void Workspace::print_info() const {
-    nlohmann::json j;
+    nlohmann::ordered_json j;
 
     if (not root_dir.empty()) j["rootDir"] = root_dir;
     if (not cppxx_cache.empty()) j["cppxxCache"] = cppxx_cache;

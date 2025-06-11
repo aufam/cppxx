@@ -5,73 +5,57 @@
 
 namespace fs = std::filesystem;
 
-static std::string extract_archive_name(const std::string &url) {
-    auto last_slash = url.find_last_of('/');
-    return (last_slash == std::string::npos) ? url : url.substr(last_slash + 1);
-}
 
-static std::string sanitize_filename(const std::string &name) {
-    std::string sanitized = name;
-    std::replace(sanitized.begin(), sanitized.end(), '/', '_');
-    return sanitized;
-}
+auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
+    const fs::path uri = uri_string;
+    const fs::path cache = cppxx_cache;
+    const std::string extension = uri.extension().string();
+    const bool is_remote = uri_string.starts_with("http://") or uri_string.starts_with("https://")
+        or uri_string.starts_with("ftp://") or uri_string.starts_with("sftp://");
+    const bool is_compressed = extension == ".zip" or extension == ".gz" or extension == ".bz2" or extension == ".xz";
 
-static std::string get_file_extension(const std::string &filename) {
-    if (filename.ends_with(".tar.gz"))
-        return "tar.gz";
-    if (filename.ends_with(".tar.bz2"))
-        return "tar.bz2";
-    if (filename.ends_with(".tar.xz"))
-        return "tar.xz";
-    if (filename.ends_with(".zip"))
-        return "zip";
-    return "";
-}
+    if (is_remote) {
+        const fs::path archive_dir = cache / "archive" / encrypt(uri_string);
+        const fs::path archive_path = archive_dir / uri.filename();
 
-auto Workspace::populate_archive(const toml::node &node, const std::string &key) -> std::string {
-    if (not node.is_string())
-        throw std::runtime_error(fmt::format("{:?} must be a string", key));
-
-    const std::string uri = expand_variables(node.value_or(""));
-    const std::string type = get_file_extension(uri);
-    const bool is_remote = uri.starts_with("http://") or uri.starts_with("https://");
-
-    if (type.empty())
-        throw std::runtime_error(fmt::format("Could not determine archive type for {:?}", uri));
-
-    const std::string archive_name = extract_archive_name(uri);
-    const std::string archive_dir = fmt::format("{}/archives/{}", cppxx_cache, sanitize_filename(archive_name));
-    const std::string archive_path = is_remote ? fmt::format("{}/{}", archive_dir, archive_name) : fs::absolute(uri).string();
-
-    if (not fs::exists(archive_path)) {
-        fmt::println(stderr, "[INFO] downloading archive: {} > /dev/null 2>&1", uri);
-        fs::create_directories(archive_dir);
-        const std::string cmd = fmt::format("curl -L -o {} {}", archive_path, uri);
-        if (int res = std::system(cmd.c_str()); res != 0)
-            throw std::runtime_error(fmt::format("Failed to download archive from {:?}. Return code: {}", uri, res));
-    }
-
-    const std::string extract_dir = fmt::format("{}/extracted", archive_dir);
-    if (not fs::exists(extract_dir)) {
-        fs::create_directories(extract_dir);
-        fmt::println(stderr, "[INFO] extracting archive: {}", archive_name);
-
-        std::string extract_cmd;
-        if (type == "zip") {
-            extract_cmd = fmt::format("unzip -q {} -d {}", archive_path, extract_dir);
-        } else if (type == "tar.gz") {
-            extract_cmd = fmt::format("tar -xzf {} -C {} --strip-components=1", archive_path, extract_dir);
-        } else if (type == "tar.bz2") {
-            extract_cmd = fmt::format("tar -xjf {} -C {} --strip-components=1", archive_path, extract_dir);
-        } else if (type == "tar.xz") {
-            extract_cmd = fmt::format("tar -xJf {} -C {} --strip-components=1", archive_path, extract_dir);
-        } else {
-            throw std::runtime_error(fmt::format("Unsupported archive type '{}'", type));
+        if (not fs::exists(archive_path)) {
+            fs::create_directories(archive_dir);
+            const std::string cmd = fmt::format("curl -L -o '{}' '{}' > /dev/null 2>&1", archive_path.string(), uri_string);
+            fmt::println(stderr, "[INFO] downloading {:?} to {:?}", uri_string, archive_path.string());
+            if (int res = std::system(cmd.c_str()); res != 0)
+                throw std::runtime_error(fmt::format("Failed to download archive from {:?}. Return code: {}", uri_string, res));
         }
 
-        if (int res = std::system(extract_cmd.c_str()); res != 0)
-            throw std::runtime_error(fmt::format("Failed to extract archive {:?}. Return code: {}", archive_name, res));
+        return populate_archive(archive_path.string());
     }
 
-    return extract_dir;
+    if (is_compressed) {
+        const fs::path extract_dir = cache / "extracted" / encrypt(uri_string);
+        if (not fs::exists(extract_dir)) {
+            fs::create_directories(extract_dir);
+            std::string extract_cmd;
+            if (extension == ".zip") {
+                extract_cmd = fmt::format("unzip -q '{}' -d '{}'", uri_string, extract_dir.string());
+            } else if (extension == ".gz") {
+                extract_cmd = fmt::format("tar -xzf '{}' -C '{}'", uri_string, extract_dir.string());
+            } else if (extension == ".bz2") {
+                extract_cmd = fmt::format("tar -xjf '{}' -C '{}'", uri_string, extract_dir.string());
+            } else if (extension == ".xz") {
+                extract_cmd = fmt::format("tar -xJf '{}' -C '{}'", uri_string, extract_dir.string());
+            } else {
+                throw std::runtime_error(fmt::format("Unsupported archive type {:?}", extension));
+            }
+
+            fmt::println(stderr, "[INFO] extracting {:?} to {:?}", uri_string, extract_dir.string());
+            if (int res = std::system(extract_cmd.c_str()); res != 0)
+                throw std::runtime_error(fmt::format("Failed to extract {:?}. Return code: {}", uri_string, res));
+        }
+
+        return populate_archive(extract_dir.string());
+    }
+
+    if (not fs::exists(uri))
+        throw std::runtime_error(fmt::format("{:?} does not exist or unresolvable", uri_string));
+
+    return uri_string;
 }
