@@ -6,16 +6,52 @@
 namespace fs = std::filesystem;
 
 
+static fs::path get_top_level_path_from_tar(const std::string &tar_file) {
+    std::vector<std::string> result;
+    std::unordered_set<std::string> unique_entries;
+
+    std::string command = "tar tf \"" + tar_file + "\" | cut -d/ -f1 | uniq";
+
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+    if (!pipe)
+        throw std::runtime_error(fmt::format("Failed to run tar command for {:?}", tar_file));
+
+    char buffer[4096];
+    while (fgets(buffer, sizeof(buffer), pipe.get())) {
+        std::string line(buffer);
+        // Remove trailing newline
+        if (!line.empty() && line.back() == '\n') {
+            line.pop_back();
+        }
+        if (!line.empty() && unique_entries.insert(line).second) {
+            result.emplace_back(line);
+        }
+    }
+
+    if (result.empty())
+        throw std::runtime_error(fmt::format("Failed to get the top level path from {:?}", tar_file));
+
+    // TODO: what if the tar_file has multiple paths
+    if (result.size() > 1)
+        throw std::runtime_error(fmt::format(
+            "Multiple top level paths from {:?} are not supported. The paths are: {}", tar_file, fmt::join(result, " ")));
+
+    return result.front();
+}
+
 auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
-    const fs::path uri = uri_string;
     const fs::path cache = cppxx_cache;
+    const fs::path archive_dir = cache / "archive";
+    const fs::path extract_dir = cache / "extracted";
+
+    const fs::path uri = uri_string;
     const std::string extension = uri.extension().string();
     const bool is_remote = uri_string.starts_with("http://") or uri_string.starts_with("https://")
         or uri_string.starts_with("ftp://") or uri_string.starts_with("sftp://");
-    const bool is_compressed = extension == ".zip" or extension == ".gz" or extension == ".bz2" or extension == ".xz";
+    const bool is_compressed =
+        extension == ".tar" or extension == ".gz" or extension == ".bz2" or extension == ".xz"; // TODO: zip?
 
     if (is_remote) {
-        const fs::path archive_dir = cache / "archive" / encrypt(uri_string);
         const fs::path archive_path = archive_dir / uri.filename();
 
         if (not fs::exists(archive_path)) {
@@ -30,12 +66,12 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
     }
 
     if (is_compressed) {
-        const fs::path extract_dir = cache / "extracted" / encrypt(uri_string);
-        if (not fs::exists(extract_dir)) {
+        const fs::path extract_path = extract_dir / get_top_level_path_from_tar(uri_string);
+        if (not fs::exists(extract_path)) {
             fs::create_directories(extract_dir);
             std::string extract_cmd;
-            if (extension == ".zip") {
-                extract_cmd = fmt::format("unzip -q '{}' -d '{}'", uri_string, extract_dir.string());
+            if (extension == ".tar") {
+                extract_cmd = fmt::format("tar -xf '{}' -C '{}'", uri_string, extract_dir.string());
             } else if (extension == ".gz") {
                 extract_cmd = fmt::format("tar -xzf '{}' -C '{}'", uri_string, extract_dir.string());
             } else if (extension == ".bz2") {
@@ -54,12 +90,9 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
         return populate_archive(extract_dir.string());
     }
 
-    if (not uri.is_absolute()) {
-        return uri_string;
-    }
-
-    if (not fs::exists(uri))
+    if (uri.is_absolute() and not fs::exists(uri))
         throw std::runtime_error(fmt::format("{:?} does not exist or unresolvable", uri_string));
 
+    // TODO: check existance of relative path?
     return uri_string;
 }

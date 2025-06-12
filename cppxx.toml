@@ -6,7 +6,7 @@ compiler = "c++"
 standard = 23
 
 [workspace.vars]
-build_type      = "${build_type:-release}"
+build_type      = "${build_type:-debug}"
 boost_version   = "${boost_version:-1.88.0}"
 fmt_version     = "${fmt_version:-11.2.0}"
 json_version    = "${json_version:-3.12.0}"
@@ -15,78 +15,81 @@ cxxopts_version = "${cxxopts_version:-3.3.1}"
 gtest_version   = "${gtest_version:-1.17.0}"
 
 
-[project.debug]
+[debug]
 flags = ["-g", "-fsanitize=address,undefined"]
 link_flags = ["-fsanitize=address,undefined"]
 
 
-[project.release]
+[release]
 flags = ["-O2", "-DNDEBUG"]
 
 
-[project.crypto]
+[crypto]
 link_flags = ["-lssl", "-lcrypto"]
 
 
-[project.preprocessor]
+[preprocessor]
 git.url = "boostorg/preprocessor"
 git.tag = "boost-${boost_version}"
 include_dirs = ["include/"]
 
 
-[project.fmt]
+[fmt]
 git.url = "fmtlib/fmt"
 git.tag = "${fmt_version}"
 include_dirs = ["include/"]
 flags = ["-DFMT_HEADER_ONLY=1"]
 
 
-[project.json]
+[json]
 sources = ["https://github.com/nlohmann/json/releases/download/v${json_version}/json.hpp"]
 
 
-[project.toml]
+[toml]
 sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v${toml_version}/toml.hpp"]
 
 
-[project.cxxopts]
+[cxxopts]
 git.url = "jarro2783/cxxopts"
 git.tag = "v${cxxopts_version}"
 include_dirs = ["include/"]
 
 
-[project.googletest]
+[gtest]
 type = "static"
 archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
-sources = ["googletest-${gtest_version}/googletest/src/gtest-all.cc", "googletest-${gtest_version}/googletest/src/gtest_main.cc"]
+sources = [
+    "googletest-${gtest_version}/googletest/src/gtest-all.cc",
+    "googletest-${gtest_version}/googletest/src/gtest_main.cc"
+]
 
-[project.googletest.include_dirs]
+[gtest.include_dirs]
 public = ["googletest-${gtest_version}/googletest/include/"]
 private = ["googletest-${gtest_version}/googletest/"]
 
 
-[project.core]
+[core]
 sources = ["src/*.cpp"]
 flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
 include_dirs = ["include/"]
 depends_on = ["preprocessor", "fmt", "json", "toml", "crypto"]
 
 
-[project.core_debug]
+[core_debug]
 depends_on = ["core", "debug"]
 
 
-[project.core_release]
+[core_release]
 depends_on = ["core", "release"]
 
 
-[project.cppxx]
+[cppxx]
 type = "executable"
 sources = ["cmd/*.cpp"]
 depends_on = ["core_${build_type}", "cxxopts"]
 
 
-[project.test]
+[test]
 type = "executable"
 sources = ["tests/*.cpp"]
-depends_on = ["core_debug", "googletest"]
+depends_on = ["core_debug", "gtest"]

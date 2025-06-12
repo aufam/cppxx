@@ -63,15 +63,13 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
         throw std::runtime_error(fmt::format("unknown c++ standard \"{}\"", w.standard));
     }
 
-    if (not config.contains("project")) {
-        fmt::println(stderr, "[WARNING] no project found");
+    config.erase("workspace");
+    if (config.empty()) {
+        fmt::println(stderr, "[WARNING] no target found");
         return w;
     }
 
-    if (not config.at("project").is_table())
-        throw std::runtime_error("\"project\" must be a table");
-
-    for (auto &[name, project] : *config.at("project").as_table()) {
+    for (auto &[name, project] : config) {
         if (not project.is_table())
             throw std::runtime_error(fmt::format("{:?} must be a table", "workspace.project." + std::string(name)));
 
