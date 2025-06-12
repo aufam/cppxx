@@ -4,7 +4,11 @@ version = "v0.1.0"
 author = "aufam"
 compiler = "c++"
 standard = 23
-vars = { gtest_version = "${gtest_version:-1.17.0}" }
+
+[workspace.vars]
+gtest_version = "${gtest_version:-1.17.0}"
+nlohmann_json_version = "${nlohmann_json_version:-3.12.0}"
+marzer_toml_version = "${marzer_toml_version:-3.4.0}"
 
 
 [project.debug]
@@ -40,21 +44,20 @@ include_dirs = ["include/"]
 
 
 [project.toml]
-git.url = "marzer/tomlplusplus"
-git.tag = "v3.4.0"
-include_dirs = [""]
+sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v3.4.0/toml.hpp"]
 
 
 [project.json]
-git.url = "nlohmann/json"
-git.tag = "v3.12.0"
-include_dirs = ["single_include/"]
+sources = ["https://github.com/nlohmann/json/releases/download/v${nlohmann_json_version}/json.hpp"]
 
 
 [project.googletest]
-archive = "https://github.com/google/googletest/releases/download/v${gtest_version:-1.17.0}/googletest-${gtest_version:-1.17.0}.tar.gz"
+archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
 sources = ["googletest-${gtest_version}/googletest/src/gtest-all.cc", "googletest-${gtest_version}/googletest/src/gtest_main.cc"]
-include_dirs = { public = ["googletest-${gtest_version}/googletest/include/"], private = ["googletest-${gtest_version}/googletest/"] }
+
+[project.googletest.include_dirs]
+public = ["googletest-${gtest_version}/googletest/include/"]
+private = ["googletest-${gtest_version}/googletest/"]
 
 
 [project.core]

@@ -26,15 +26,14 @@ void Workspace::populate_compile_commands() {
                 flags.emplace(flag);
 
             const std::string command = fmt::format("{} {}", compiler, fmt::join(flags, " "));
-            const fs::path file = base_path / src;
+            fs::path file = src;
+            if (not file.is_absolute())
+                file = base_path / file;
 
             CompileCommand cc;
             cc.file = file.string();
-            cc.output = src + ".o";
-
-            cc.directory = (cc.file.starts_with(cppxx_cache) ? base_path / ".cppxx" / encrypt(command)
-                                                             : cache_path / "build" / title / version / encrypt(command))
-                               .string();
+            cc.output = encrypt(command) + encrypt(cc.file) + "-" + file.filename().string() + ".o";
+            cc.directory = cache_path / "build";
             cc.command = fmt::format("{} -o {} -c {}", command, cc.output, cc.file);
 
             project.compile_commands.push_back(std::move(cc));
@@ -59,4 +58,6 @@ void Workspace::generate_compile_commands_json() const {
     out << j.dump(2);
 }
 
-auto Workspace::CompileCommand::abs_output() const -> std::string { return (fs::path(directory) / fs::path(output)).string(); }
+auto Workspace::CompileCommand::abs_output() const -> std::string {
+    return (fs::path(directory) / fs::path(output)).string();
+}

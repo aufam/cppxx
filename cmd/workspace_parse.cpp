@@ -109,14 +109,16 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
                 w.assign_string(node, fmt::format("workspace.project.{}.archive", std::string(name)), uri);
                 base_path = w.populate_archive(uri);
             } else {
-                fmt::println(
-                    stderr, "[WARNING] unused key {:?}", "workspace.project." + std::string(name) + "." + std::string(key));
+                fmt::println(stderr,
+                             "[WARNING] unused key {:?}",
+                             "workspace.project." + std::string(name) + "." + std::string(key));
             }
         }
 
         // Normalize type
         if (proj.type != "interface" and proj.type != "executable" and proj.type != "static" and proj.type != "dynamic")
-            throw std::runtime_error(fmt::format("unknown {:?} value", "workspace.project." + std::string(name) + ".type"));
+            throw std::runtime_error(
+                fmt::format("unknown {:?} value", "workspace.project." + std::string(name) + ".type"));
 
         if (proj.type == "interface") {
             proj.public_flags.insert(proj.public_flags.end(), flags.begin(), flags.end());
@@ -134,12 +136,25 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
 
         // Normalize source and include dirs
         // TODO: use populate archive
-        for (auto &expandable : sources) {
-            for (auto &src : expand_path((base_path / expandable).string())) {
-                if (not fs::is_regular_file(src))
-                    throw std::runtime_error(fmt::format("{:?} is not a regular file", src));
+        for (auto &src : sources) {
+            std::vector<std::string> expanded;
+            if (src.find('*') != std::string::npos) {
+                fs::path path_to_expand = src;
+                if (not path_to_expand.is_absolute())
+                    path_to_expand = base_path / path_to_expand;
 
-                proj.sources.push_back(fs::relative(src, base_path).string());
+                expanded = expand_path(path_to_expand);
+            } else {
+                expanded.push_back(w.populate_archive(src));
+            }
+
+            for (fs::path path : expanded) {
+                std::string extension = path.extension();
+                if (extension == ".cpp" or extension == ".cxx" or extension == ".c" or extension == ".cc") {
+                    proj.sources.push_back(path);
+                } else if (extension == ".h" or extension == ".hpp") {
+                    proj.private_include_dirs.push_back(path.parent_path());
+                }
             }
         }
         for (auto &dir : proj.private_include_dirs) {

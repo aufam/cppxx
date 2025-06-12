@@ -54,6 +54,10 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
         return populate_archive(extract_dir.string());
     }
 
+    if (not uri.is_absolute()) {
+        return uri_string;
+    }
+
     if (not fs::exists(uri))
         throw std::runtime_error(fmt::format("{:?} does not exist or unresolvable", uri_string));
 

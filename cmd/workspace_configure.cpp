@@ -29,8 +29,7 @@ void Workspace::configure() const {
 
         fs::create_directories(fs::path(cc.abs_output()).parent_path());
         int status = std::system(("cd " + cc.directory + " && " + cc.command).c_str());
-        if (!WIFEXITED(status) or WEXITSTATUS(status) != 0) {
-            throw std::runtime_error("Command did not exit normally\n");
-        }
+        if (!WIFEXITED(status) or WEXITSTATUS(status) != 0)
+            throw std::runtime_error(fmt::format("Command did not exit normally. Return code: {}", status));
     }
 }

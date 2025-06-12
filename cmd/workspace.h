@@ -31,6 +31,7 @@ struct Workspace {
     std::unordered_map<std::string, Project> projects;
 
     static auto parse(std::string root_dir = "") -> Workspace;
+    // TODO: create populate function to only populate git and archive
     void configure() const;
     void build(const std::string &target, const std::string &out) const;
     void clear(const std::string &target) const;
