@@ -43,7 +43,18 @@ void Workspace::build(const std::string &target, const std::string &out) const {
     if (deps.empty())
         throw std::runtime_error(fmt::format("Object files for target {:?} are empty", target));
 
-    auto cmd = fmt::format("{} {} {} -o {}", compiler, fmt::join(deps, " "), fmt::join(flags, " "), out);
+    std::string cmd;
+    if (project.type == "executable") {
+        cmd = fmt::format("{} {} {} -o {}", compiler, fmt::join(deps, " "), fmt::join(flags, " "), out);
+    } else if (project.type == "dynamic") {
+        cmd = fmt::format("{} -shared {} {} -o {}", compiler, fmt::join(deps, " "), fmt::join(flags, " "), out);
+    } else if (project.type == "static") {
+        // TODO: other archivers?
+        cmd = fmt::format("ar rcs lib{}.a {}", out, fmt::join(deps, " "));
+    } else {
+        throw std::runtime_error(fmt::format("Unknown target type {:?}", project.type));
+    }
+
     fmt::println(stderr, "[INFO] building {}", target);
     if (int res = std::system(cmd.c_str()); res != 0)
         throw std::runtime_error(fmt::format("Failed to build {:?}. return code {}", target, res));

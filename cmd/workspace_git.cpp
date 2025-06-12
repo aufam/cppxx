@@ -57,14 +57,16 @@ auto Workspace::populate_git(const toml::node &node, const std::string &key) -> 
     const std::string tag = expand_variables(node.as_table()->at("tag").value_or(""));
     const std::string host = extract_host_and_path(url);
 
-    const std::string target_path = fmt::format("{}/{}/{}", cppxx_cache, host, tag);
-    if (fs::exists(target_path))
-        return target_path;
+    const fs::path result_path = fs::path(cppxx_cache) / host / tag;
+    if (fs::exists(result_path)) {
+        // TODO: check if the result_path is dirty or needs update
+        return result_path;
+    }
 
     fmt::println(stderr, "[INFO] cloning {}@{}", host, tag);
-    const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, target_path);
+    const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, result_path.string());
     if (int res = std::system(cmd.c_str()); res != 0)
         throw std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res));
 
-    return target_path;
+    return result_path;
 }

@@ -10,7 +10,7 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
 
     w.cppxx_cache = std::getenv("CPPXX_CACHE");
     if (w.cppxx_cache.empty())
-        throw std::runtime_error("CPPXX_CACHE is not specified");
+        w.cppxx_cache = ".cppxx";
 
     w.cppxx_cache = fs::weakly_canonical(w.cppxx_cache).string();
     w.root_dir = fs::weakly_canonical(root_dir).string();
@@ -135,7 +135,6 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
         proj.base_path = base_path.string();
 
         // Normalize source and include dirs
-        // TODO: use populate archive
         for (auto &src : sources) {
             std::vector<std::string> expanded;
             if (src.find('*') != std::string::npos) {
@@ -153,7 +152,10 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
                 if (extension == ".cpp" or extension == ".cxx" or extension == ".c" or extension == ".cc") {
                     proj.sources.push_back(path);
                 } else if (extension == ".h" or extension == ".hpp") {
-                    proj.private_include_dirs.push_back(path.parent_path());
+                    if (proj.type == "interface")
+                        proj.public_include_dirs.push_back(path.parent_path());
+                    else
+                        proj.private_include_dirs.push_back(path.parent_path());
                 }
             }
         }

@@ -6,9 +6,13 @@ compiler = "c++"
 standard = 23
 
 [workspace.vars]
-gtest_version = "${gtest_version:-1.17.0}"
-nlohmann_json_version = "${nlohmann_json_version:-3.12.0}"
-marzer_toml_version = "${marzer_toml_version:-3.4.0}"
+build_type      = "${build_type:-release}"
+boost_version   = "${boost_version:-1.88.0}"
+fmt_version     = "${fmt_version:-11.2.0}"
+json_version    = "${json_version:-3.12.0}"
+toml_version    = "${toml_version:-3.4.0}"
+cxxopts_version = "${cxxopts_version:-3.3.1}"
+gtest_version   = "${gtest_version:-1.17.0}"
 
 
 [project.debug]
@@ -17,7 +21,7 @@ link_flags = ["-fsanitize=address,undefined"]
 
 
 [project.release]
-flags = ["-O3", "-DNDEBUG"]
+flags = ["-O2", "-DNDEBUG"]
 
 
 [project.crypto]
@@ -26,32 +30,33 @@ link_flags = ["-lssl", "-lcrypto"]
 
 [project.preprocessor]
 git.url = "boostorg/preprocessor"
-git.tag = "boost-1.88.0"
+git.tag = "boost-${boost_version}"
 include_dirs = ["include/"]
 
 
 [project.fmt]
 git.url = "fmtlib/fmt"
-git.tag = "11.2.0"
+git.tag = "${fmt_version}"
 include_dirs = ["include/"]
 flags = ["-DFMT_HEADER_ONLY=1"]
 
 
-[project.cxxopts]
-git.url = "jarro2783/cxxopts"
-git.tag = "v3.3.1"
-include_dirs = ["include/"]
+[project.json]
+sources = ["https://github.com/nlohmann/json/releases/download/v${json_version}/json.hpp"]
 
 
 [project.toml]
-sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v3.4.0/toml.hpp"]
+sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v${toml_version}/toml.hpp"]
 
 
-[project.json]
-sources = ["https://github.com/nlohmann/json/releases/download/v${nlohmann_json_version}/json.hpp"]
+[project.cxxopts]
+git.url = "jarro2783/cxxopts"
+git.tag = "v${cxxopts_version}"
+include_dirs = ["include/"]
 
 
 [project.googletest]
+type = "static"
 archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
 sources = ["googletest-${gtest_version}/googletest/src/gtest-all.cc", "googletest-${gtest_version}/googletest/src/gtest_main.cc"]
 
@@ -78,7 +83,7 @@ depends_on = ["core", "release"]
 [project.cppxx]
 type = "executable"
 sources = ["cmd/*.cpp"]
-depends_on = ["core_${build_type:-release}", "cxxopts"]
+depends_on = ["core_${build_type}", "cxxopts"]
 
 
 [project.test]

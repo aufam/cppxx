@@ -13,6 +13,7 @@ struct Workspace {
         std::string abs_output() const;
     };
 
+    // TODO: rename to target
     struct Project {
         std::string type = "interface";
         std::string base_path;
