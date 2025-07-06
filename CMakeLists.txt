@@ -41,7 +41,7 @@ target_include_directories(cppxx_private INTERFACE
     "${fmt_SOURCE_DIR}/include"
     "${cxxopts_SOURCE_DIR}/include"
     "${toml_SOURCE_DIR}"
-    "${json_SOURCE_DIR}/single_include"
+    "${json_SOURCE_DIR}/single_include/nlohmann"
 )
 
 target_compile_definitions(cppxx_private INTERFACE
@@ -74,6 +74,14 @@ target_link_libraries(cppxx PRIVATE
 target_link_libraries(cppxx PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 target_compile_features(cppxx PUBLIC cxx_std_23)
+
+target_compile_options(cppxx PUBLIC
+    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+)
+
+target_link_options(cppxx PUBLIC
+    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+)
 
 file(GLOB_RECURSE CMD_SOURCES cmd/*)
 add_executable(cmd ${CMD_SOURCES})

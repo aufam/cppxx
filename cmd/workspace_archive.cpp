@@ -19,13 +19,12 @@ static fs::path get_top_level_path_from_tar(const std::string &tar_file) {
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), pipe.get())) {
         std::string line(buffer);
-        // Remove trailing newline
-        if (!line.empty() && line.back() == '\n') {
+        if (line.empty())
+            continue;
+        if (line.back() == '\n')
             line.pop_back();
-        }
-        if (!line.empty() && unique_entries.insert(line).second) {
+        if (unique_entries.insert(line).second)
             result.emplace_back(line);
-        }
     }
 
     if (result.empty())
@@ -48,8 +47,8 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
     const std::string extension = uri.extension().string();
     const bool is_remote = uri_string.starts_with("http://") or uri_string.starts_with("https://")
         or uri_string.starts_with("ftp://") or uri_string.starts_with("sftp://");
-    const bool is_compressed =
-        extension == ".tar" or extension == ".gz" or extension == ".bz2" or extension == ".xz"; // TODO: zip?
+    const bool is_compressed = extension == ".tar" or extension == ".tgz" or extension == ".gz" or extension == ".tbz2"
+        or extension == ".bz2" or extension == ".xz"; // TODO: zip?
 
     if (is_remote) {
         const fs::path archive_path = archive_dir / uri.filename();
@@ -72,9 +71,9 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
             std::string extract_cmd;
             if (extension == ".tar") {
                 extract_cmd = fmt::format("tar -xf '{}' -C '{}'", uri_string, extract_dir.string());
-            } else if (extension == ".gz") {
+            } else if (extension == ".gz" or extension == ".tgz") {
                 extract_cmd = fmt::format("tar -xzf '{}' -C '{}'", uri_string, extract_dir.string());
-            } else if (extension == ".bz2") {
+            } else if (extension == ".bz2" or extension == ".tbz2") {
                 extract_cmd = fmt::format("tar -xjf '{}' -C '{}'", uri_string, extract_dir.string());
             } else if (extension == ".xz") {
                 extract_cmd = fmt::format("tar -xJf '{}' -C '{}'", uri_string, extract_dir.string());
@@ -87,7 +86,7 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
                 throw std::runtime_error(fmt::format("Failed to extract {:?}. Return code: {}", uri_string, res));
         }
 
-        return populate_archive(extract_dir.string());
+        return populate_archive(extract_path.string());
     }
 
     if (uri.is_absolute() and not fs::exists(uri))

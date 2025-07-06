@@ -1,5 +1,5 @@
 #include <fmt/ranges.h>
-#include <nlohmann/json.hpp>
+#include <json.hpp>
 #include <filesystem>
 #include "workspace.h"
 

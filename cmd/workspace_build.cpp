@@ -57,5 +57,5 @@ void Workspace::build(const std::string &target, const std::string &out) const {
 
     fmt::println(stderr, "[INFO] building {}", target);
     if (int res = std::system(cmd.c_str()); res != 0)
-        throw std::runtime_error(fmt::format("Failed to build {:?}. return code {}", target, res));
+        throw std::runtime_error(fmt::format("Failed to build {:?} with command {:?} return code {}", target, cmd, res));
 }
