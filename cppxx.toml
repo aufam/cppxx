@@ -58,14 +58,8 @@ include_dirs = ["include/"]
 [gtest]
 type = "static"
 archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
-sources = [
-    "googletest-${gtest_version}/googletest/src/gtest-all.cc",
-    "googletest-${gtest_version}/googletest/src/gtest_main.cc"
-]
-
-[gtest.include_dirs]
-public = ["googletest-${gtest_version}/googletest/include/"]
-private = ["googletest-${gtest_version}/googletest/"]
+sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
+include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
 
 
 [core]
