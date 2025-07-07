@@ -14,6 +14,9 @@
 namespace cppxx {
     using std::views::reverse;
     using std::views::zip;
+    using std::views::repeat;
+    using std::views::join;
+    using std::views::join_with;
 
 
     struct iter {

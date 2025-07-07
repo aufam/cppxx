@@ -78,7 +78,7 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
             } else if (extension == ".xz") {
                 extract_cmd = fmt::format("tar -xJf '{}' -C '{}'", uri_string, extract_dir.string());
             } else {
-                throw std::runtime_error(fmt::format("Unsupported archive type {:?}", extension));
+                throw std::runtime_error(fmt::format("Unsupported archive type {:?}", uri_string));
             }
 
             fmt::println(stderr, "[INFO] extracting {:?} to {:?}", uri_string, extract_dir.string());

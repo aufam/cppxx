@@ -1,41 +1,50 @@
 #include <fmt/ranges.h>
+#include <ranges>
 #include "workspace.h"
 
 
-void Workspace::resolve_dependencies(const std::string &name,
-                                     std::unordered_set<std::string> &visited,
-                                     std::vector<std::string> &stack) {
-    if (std::find(stack.begin(), stack.end(), name) != stack.end())
-        throw std::runtime_error(fmt::format("Circular dependency detected: {}", name));
+static void resolve(Workspace &w,
+                    const std::string &target_name,
+                    Workspace::Target &target,
+                    std::unordered_set<std::string> &visited,
+                    std::vector<std::string> &stack) {
+    if (std::find(stack.begin(), stack.end(), target_name) != stack.end())
+        throw std::runtime_error(
+            fmt::format("Circular dependency detected in target {:?}. The dependencies are {}", target_name, stack));
 
-    if (visited.count(name))
+    if (visited.count(target_name))
         return;
 
-    stack.push_back(name);
-    auto &project = projects.at(name);
+    stack.push_back(target_name);
 
-    for (const auto &dep : project.private_depends_on) {
-        auto it = projects.find(dep);
-        if (it == projects.end())
-            throw std::runtime_error(fmt::format("\"workspace.project.{}\" is not found", dep));
+    for (auto [is_public, dep_name] :
+         std::array{
+             std::views::zip(std::views::repeat(false), target.private_depends_on),
+             std::views::zip(std::views::repeat(true), target.private_depends_on),
+         } | std::views::join) {
+        auto it = w.targets.find(dep_name);
+        if (it == w.targets.end())
+            throw std::runtime_error(fmt::format("{:?} which is required by {:?} is not found", dep_name, target_name));
 
-        resolve_dependencies(dep, visited, stack);
-        project.private_flags.insert(project.private_flags.end(), it->second.public_flags.begin(), it->second.public_flags.end());
-        project.private_include_dirs.insert(
-            project.private_include_dirs.end(), it->second.public_include_dirs.begin(), it->second.public_include_dirs.end());
-    }
+        auto &dep = it->second;
+        resolve(w, dep_name, dep, visited, stack);
 
-    for (const auto &dep : project.public_depends_on) {
-        auto it = projects.find(dep);
-        if (it == projects.end())
-            throw std::runtime_error(fmt::format("\"workspace.project.{}\" is not found", dep));
+        std::ranges::copy(dep.public_flags,
+                          is_public ? std::back_inserter(target.public_flags) : std::back_inserter(target.private_flags));
 
-        resolve_dependencies(dep, visited, stack);
-        project.public_flags.insert(project.public_flags.end(), it->second.public_flags.begin(), it->second.public_flags.end());
-        project.public_include_dirs.insert(
-            project.public_include_dirs.end(), it->second.public_include_dirs.begin(), it->second.public_include_dirs.end());
+        std::ranges::copy(dep.public_include_dirs,
+                          is_public ? std::back_inserter(target.public_include_dirs)
+                                    : std::back_inserter(target.private_include_dirs));
     }
 
     stack.pop_back();
-    visited.insert(name);
+    visited.insert(target_name);
+}
+
+void Workspace::resolve_dependencies() {
+    std::unordered_set<std::string> visited;
+    for (auto &[name, target] : targets) {
+        std::vector<std::string> stack;
+        resolve(*this, name, target, visited, stack);
+    }
 }

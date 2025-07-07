@@ -2,11 +2,11 @@
 #include "workspace.h"
 
 
-void Workspace::assign_int(const toml::node &node, const std::string &key, int &value) {
+void Workspace::assign_int(const toml::node &node, const std::string &key, int &value) const {
     if (node.is_integer()) {
         value = node.value_or(0);
     } else if (node.is_string()) {
-        const std::string val = node.value_or("");
+        const std::string val = expand_variables(node.value_or(""));
         try {
             value = std::stoi(val);
         } catch (const std::invalid_argument &e) {
@@ -35,22 +35,27 @@ void Workspace::assign_list(const toml::node &node,
     if (public_values and private_values and node.is_table()) {
         bool has_public_or_private;
         if (node.as_table()->contains("public")) {
+            auto &arr = node.as_table()->at("public");
+            if (not arr.is_array())
+                throw std::runtime_error(fmt::format("{:?} must be an array of strings", key + ".public"));
+
             has_public_or_private = true;
-            for (auto &src : *node.as_table()->at("public").as_array())
+            for (auto &src : *arr.as_array())
                 public_values->push_back(expand_variables(src.value_or("")));
         }
 
         if (node.as_table()->contains("private")) {
-            has_public_or_private = true;
+            auto &arr = node.as_table()->at("private");
+            if (not arr.is_array())
+                throw std::runtime_error(fmt::format("{:?} must be an array of strings", key + ".private"));
 
-            for (auto &src : *node.as_table()->at("private").as_array())
-                private_values->push_back(expand_variables(src.value_or("")));
+            has_public_or_private = true;
+            for (auto &src : *arr.as_array())
+                public_values->push_back(expand_variables(src.value_or("")));
         }
 
         if (not has_public_or_private)
             fmt::println(stderr, "[WARNING] field {:?} has no private nor public specifier", key);
-
-        return;
     } else if (node.is_array()) {
         for (auto &src : *node.as_array())
             values.push_back(expand_variables(src.value_or("")));
@@ -64,9 +69,9 @@ void Workspace::assign_map(const toml::node &node, const std::string &key, std::
         throw std::runtime_error(fmt::format("{:?} must be a map of strings", key));
 
     for (auto &[k, v] : *node.as_table()) {
-        const std::string sub_key(k);
+        const auto sub_key = std::string(k);
         if (not v.is_string())
-            throw std::runtime_error(fmt::format("{:?} must be a string", key + sub_key));
+            throw std::runtime_error(fmt::format("{:?} must be a string", key + "." + sub_key));
 
         map[sub_key] = expand_variables(v.value_or(""));
     }
