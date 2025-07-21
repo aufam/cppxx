@@ -78,6 +78,7 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
             throw std::runtime_error(fmt::format("{:?} must be a table", target_name));
 
         auto target = Target{};
+        bool is_remote = false;
         std::vector<std::string> flags, include_dirs, depends_on, sources;
         fs::path base_path = std::getenv("PWD");
         if (not root_dir.empty())
@@ -98,11 +99,21 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
             } else if (key == "link_flags") {
                 w.assign_list(node, node_key, target.link_flags);
             } else if (key == "git") {
+                if (is_remote)
+                    throw std::runtime_error(fmt::format(
+                        "Multiple non local source detected for target {:?}. Please only specify \"git\" or \"archive\"",
+                        target_name));
                 base_path = w.populate_git(node, node_key);
+                is_remote = true;
             } else if (key == "archive") {
+                if (is_remote)
+                    throw std::runtime_error(fmt::format("Multiple remote source detected for target {:?}. Please only specify "
+                                                         "\"git\" or \"archive\", but not both",
+                                                         target_name));
                 std::string uri;
                 w.assign_string(node, node_key, uri);
                 base_path = w.populate_archive(uri);
+                is_remote = true;
             } else {
                 fmt::println(stderr, "[WARNING] unused key {:?}", node_key);
             }
@@ -152,16 +163,23 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
             }
         }
 
-        for (auto &dir : std::array{std::views::all(target.private_include_dirs), std::views::all(target.public_include_dirs)}
-                 | std::views::join) {
-            fs::path path = dir;
+        for (auto [is_dir, path_str] :
+             std::array{
+                 std::views::zip(std::views::repeat(true), target.private_include_dirs),
+                 std::views::zip(std::views::repeat(true), target.public_include_dirs),
+                 std::views::zip(std::views::repeat(false), target.sources),
+             } | std::views::join) {
+            fs::path path = path_str;
             if (not path.is_absolute())
                 path = fs::absolute(base_path) / path;
 
-            if (not fs::is_directory(path))
-                throw std::runtime_error(fmt::format("{:?} is not a directory", path.string()));
+            if (is_dir and not fs::is_directory(path))
+                throw std::runtime_error(fmt::format("{:?} which is an include dir for {:?}, is not a directory", path.string(), target_name));
 
-            dir = path;
+            if (not is_dir and not fs::exists(path))
+                throw std::runtime_error(fmt::format("{:?} which is a source file for {:?}, does not exists", path.string(), target_name));
+
+            path_str = path;
         }
 
         w.targets.emplace(target_name, std::move(target));

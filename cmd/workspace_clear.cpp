@@ -11,8 +11,8 @@ void Workspace::clear(const std::string &target) const {
         return;
     }
 
-    auto it = projects.find(target);
-    if (it == projects.end()) {
+    auto it = targets.find(target);
+    if (it == targets.end()) {
         fmt::println(stderr, "[WARNING] target {:?} does not exist", target);
         return;
     }

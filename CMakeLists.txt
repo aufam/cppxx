@@ -8,7 +8,6 @@ project(cppxx
 )
 
 # some options
-option(CPPXX_BUILD_APPS   "Build CLI apps"                OFF)
 option(CPPXX_BUILD_TESTS  "Build test cases"              OFF)
 option(CPPXX_REQUIREMENTS "Only install the requirements" OFF)
 
@@ -16,6 +15,10 @@ option(CPPXX_REQUIREMENTS "Only install the requirements" OFF)
 message(STATUS "CPPXX_VERSION       : ${cppxx_VERSION}")
 message(STATUS "CPPXX_BUILD_TESTS   : ${CPPXX_BUILD_TESTS}")
 message(STATUS "CPPXX_REQUIREMENTS  : ${CPPXX_REQUIREMENTS}")
+
+# system libraries
+# find_package(OpenSSL REQUIRED)
+# message(STATUS "OPENSSL_VERSION     : ${OPENSSL_VERSION}")
 
 # external libraries
 include("cmake/cppxx.cmake")
@@ -25,6 +28,7 @@ cppxx_github_package("toml:marzer/tomlplusplus#v3.4.0"                 DOWNLOAD_
 cppxx_github_package("json:nlohmann/json#v3.12.0"                      DOWNLOAD_ONLY YES)
 cppxx_github_package("cxxopts:jarro2783/cxxopts#v3.3.1"                DOWNLOAD_ONLY YES)
 cppxx_github_package("googletest:google/googletest#v1.17.0"            OPTIONS "INSTALL_GTEST OFF")
+cppxx_github_package("openssl:janbar/openssl-cmake#1.1.1w-20250419"    OPTIONS "WITH_APPS OFF")
 
 # only setup the exeternal libraries
 if (CPPXX_REQUIREMENTS)
@@ -52,9 +56,12 @@ target_compile_options(cppxx_private INTERFACE
     -Wall
     -Wextra
     -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=cppxx
+    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )
 
-find_package(OpenSSL REQUIRED)
+target_link_options(cppxx_private INTERFACE
+    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+)
 
 
 ## main lib
@@ -69,19 +76,10 @@ target_include_directories(cppxx PUBLIC
 
 target_link_libraries(cppxx PRIVATE
     cppxx_private
+    crypto
 )
-
-target_link_libraries(cppxx PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 target_compile_features(cppxx PUBLIC cxx_std_23)
-
-target_compile_options(cppxx PUBLIC
-    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-)
-
-target_link_options(cppxx PUBLIC
-    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-)
 
 file(GLOB_RECURSE CMD_SOURCES cmd/*)
 add_executable(cmd ${CMD_SOURCES})
@@ -89,11 +87,6 @@ target_link_libraries(cmd PRIVATE
     cppxx
     cppxx_private
 )
-
-# apps
-if (CPPXX_BUILD_APPS)
-	add_subdirectory(apps)
-endif()
 
 # tests
 if (CPPXX_BUILD_TESTS)

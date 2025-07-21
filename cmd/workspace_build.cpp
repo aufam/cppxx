@@ -6,27 +6,24 @@ static void collect_deps(const Workspace &w,
                          std::unordered_set<std::string> &deps,
                          std::unordered_set<std::string> &flags,
                          const std::string &target) {
-    const auto &p = w.projects.at(target);
+    const auto &p = w.targets.at(target);
 
     for (auto &cc : p.compile_commands)
         deps.emplace(cc.abs_output());
-
-    for (auto &f : p.private_link_flags)
-        flags.emplace(f);
-
-    for (auto &f : p.public_link_flags)
-        flags.emplace(f);
 
     for (auto &n : p.private_depends_on)
         collect_deps(w, deps, flags, n);
 
     for (auto &n : p.public_depends_on)
         collect_deps(w, deps, flags, n);
+
+    for (auto &f : p.link_flags)
+        flags.emplace(f);
 }
 
 void Workspace::build(const std::string &target, const std::string &out) const {
-    auto it = projects.find(target);
-    if (it == projects.end()) {
+    auto it = targets.find(target);
+    if (it == targets.end()) {
         fmt::println(stderr, "[WARNING] project {:?} does not exist", target);
         return;
     }

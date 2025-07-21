@@ -15,18 +15,17 @@ void Workspace::print_info() const {
     if (standard) j["standard"] = standard;
     if (not vars.empty()) j["vars"] = vars;
 
-    for (auto &[name, project]: projects) {
-        j[name]["type"] = project.type;
-        j[name]["basePath"] = project.base_path;
-        if (not project.sources.empty()) j[name]["sources"] = project.sources;
-        if (not project.private_flags.empty()) j[name]["flags"]["private"] = project.private_flags;
-        if (not project.public_flags.empty()) j[name]["flags"]["public"] = project.public_flags;
-        if (not project.private_link_flags.empty()) j[name]["linkFlags"]["private"] = project.private_link_flags;
-        if (not project.public_link_flags.empty()) j[name]["linkFlags"]["public"] = project.public_link_flags;
-        if (not project.private_include_dirs.empty()) j[name]["includeDirs"]["private"] = project.private_include_dirs;
-        if (not project.public_include_dirs.empty()) j[name]["includeDirs"]["public"] = project.public_include_dirs;
-        if (not project.private_depends_on.empty()) j[name]["dependsOn"]["private"] = project.private_depends_on;
-        if (not project.public_depends_on.empty()) j[name]["dependsOn"]["public"] = project.public_depends_on;
+    for (auto &[name, target]: targets) {
+        j[name]["type"] = target.type;
+        j[name]["basePath"] = target.base_path;
+        if (not target.sources.empty()) j[name]["sources"] = target.sources;
+        if (not target.private_flags.empty()) j[name]["flags"]["private"] = target.private_flags;
+        if (not target.public_flags.empty()) j[name]["flags"]["public"] = target.public_flags;
+        if (not target.private_include_dirs.empty()) j[name]["includeDirs"]["private"] = target.private_include_dirs;
+        if (not target.public_include_dirs.empty()) j[name]["includeDirs"]["public"] = target.public_include_dirs;
+        if (not target.private_depends_on.empty()) j[name]["dependsOn"]["private"] = target.private_depends_on;
+        if (not target.public_depends_on.empty()) j[name]["dependsOn"]["public"] = target.public_depends_on;
+        if (not target.link_flags.empty()) j[name]["linkFlags"]["private"] = target.link_flags;
     }
 
     fmt::println("{}", j.dump(2));

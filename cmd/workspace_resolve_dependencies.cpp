@@ -20,7 +20,7 @@ static void resolve(Workspace &w,
     for (auto [is_public, dep_name] :
          std::array{
              std::views::zip(std::views::repeat(false), target.private_depends_on),
-             std::views::zip(std::views::repeat(true), target.private_depends_on),
+             std::views::zip(std::views::repeat(true), target.public_depends_on),
          } | std::views::join) {
         auto it = w.targets.find(dep_name);
         if (it == w.targets.end())

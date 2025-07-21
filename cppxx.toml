@@ -25,7 +25,7 @@ flags = ["-O2", "-DNDEBUG"]
 
 
 [crypto]
-link_flags = ["-lssl", "-lcrypto"]
+link_flags = ["~/libcrypto.a"]
 
 
 [preprocessor]

@@ -6,7 +6,7 @@ namespace fs = std::filesystem;
 
 void Workspace::configure() const {
     std::vector<CompileCommand> all;
-    for (auto &[_, project] : projects) {
+    for (auto &[_, project] : targets) {
         for (auto &cc : project.compile_commands) {
             const fs::path file = cc.file;
             const fs::path output = cc.abs_output();

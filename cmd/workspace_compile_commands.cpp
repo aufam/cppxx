@@ -1,6 +1,7 @@
 #include <fmt/ranges.h>
 #include <json.hpp>
 #include <filesystem>
+#include <ranges>
 #include "workspace.h"
 
 namespace fs = std::filesystem;
@@ -11,24 +12,24 @@ void Workspace::populate_compile_commands() {
     for (auto &[_, target] : targets) {
         const fs::path base_path = target.base_path;
         for (auto &src : target.sources) {
-            std::unordered_set<std::string> flags{
-                fmt::format("-std=c++{}", standard),
-            };
+            std::unordered_set<std::string> flags_set = {fmt::format("-std=c++{}", standard)};
+            std::vector<std::string> flags = {fmt::format("-std=c++{}", standard)};
 
-            for (auto dir : target.private_include_dirs)
-                flags.emplace("-I" + dir);
-            for (auto dir : target.public_include_dirs)
-                flags.emplace("-I" + dir);
-
-            for (auto flag : target.private_flags)
-                flags.emplace(flag);
-            for (auto flag : target.public_flags)
-                flags.emplace(flag);
+            for (auto [is_inc_dir, item] :
+                 std::array{
+                     std::views::zip(std::views::repeat(true), target.private_include_dirs),
+                     std::views::zip(std::views::repeat(true), target.public_include_dirs),
+                     std::views::zip(std::views::repeat(false), target.private_flags),
+                     std::views::zip(std::views::repeat(false), target.public_flags),
+                 } | std::views::join) {
+                const auto flag = is_inc_dir ? "-I" + item : item;
+                const auto [_, ok] = flags_set.emplace(flag);
+                if (ok)
+                    flags.push_back(flag);
+            }
 
             const std::string command = fmt::format("{} {}", compiler, fmt::join(flags, " "));
             fs::path file = src;
-            if (not file.is_absolute())
-                file = base_path / file;
 
             CompileCommand cc;
             cc.file = file.string();
@@ -43,7 +44,7 @@ void Workspace::populate_compile_commands() {
 
 void Workspace::generate_compile_commands_json() const {
     nlohmann::json j;
-    for (const auto &[_, target] : projects) {
+    for (const auto &[_, target] : targets) {
         for (const auto &cc : target.compile_commands) {
             j.push_back({
                 {"directory", cc.directory},
@@ -58,6 +59,4 @@ void Workspace::generate_compile_commands_json() const {
     out << j.dump(2);
 }
 
-auto Workspace::CompileCommand::abs_output() const -> std::string {
-    return (fs::path(directory) / fs::path(output)).string();
-}
+auto Workspace::CompileCommand::abs_output() const -> std::string { return (fs::path(directory) / fs::path(output)).string(); }
