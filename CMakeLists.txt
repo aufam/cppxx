@@ -22,18 +22,30 @@ message(STATUS "CPPXX_REQUIREMENTS  : ${CPPXX_REQUIREMENTS}")
 
 # external libraries
 include("cmake/cppxx.cmake")
-cppxx_github_package("preprocessor:boostorg/preprocessor#boost-1.88.0" DOWNLOAD_ONLY YES)
-cppxx_github_package("fmt:fmtlib/fmt#11.2.0"                           DOWNLOAD_ONLY YES)
-cppxx_github_package("toml:marzer/tomlplusplus#v3.4.0"                 DOWNLOAD_ONLY YES)
-cppxx_github_package("json:nlohmann/json#v3.12.0"                      DOWNLOAD_ONLY YES)
-cppxx_github_package("cxxopts:jarro2783/cxxopts#v3.3.1"                DOWNLOAD_ONLY YES)
-cppxx_github_package("googletest:google/googletest#v1.17.0"            OPTIONS "INSTALL_GTEST OFF")
-cppxx_github_package("openssl:janbar/openssl-cmake#1.1.1w-20250419"    OPTIONS "WITH_APPS OFF")
+cppxx_github_package("boost_pp:boostorg/preprocessor#boost-1.88.0"   DOWNLOAD_ONLY YES)
+cppxx_github_package("fmt:fmtlib/fmt#11.2.0"                         DOWNLOAD_ONLY YES)
+cppxx_github_package("toml:marzer/tomlplusplus#v3.4.0"               DOWNLOAD_ONLY YES)
+cppxx_github_package("json:nlohmann/json#v3.12.0"                    DOWNLOAD_ONLY YES)
+cppxx_github_package("opts:jarro2783/cxxopts#v3.3.1"                 DOWNLOAD_ONLY YES)
+cppxx_github_package("http:yhirose/cpp-httplib#v0.23.1"              DOWNLOAD_ONLY YES)
+cppxx_github_package("googletest:google/googletest#v1.17.0"          OPTIONS "INSTALL_GTEST OFF")
+cppxx_github_package("openssl:janbar/openssl-cmake#1.1.1w-20250419"  OPTIONS "WITH_APPS OFF")
+
+set(CPPXX_THIRD_PARTY_INCLUDE_DIRS
+    "${boost_pp_SOURCE_DIR}/include"
+    "${fmt_SOURCE_DIR}/include"
+    "${json_SOURCE_DIR}/single_include/nlohmann"
+    "${toml_SOURCE_DIR}"
+    "${opts_SOURCE_DIR}/include"
+    "${http_SOURCE_DIR}"
+)
+cppxx_assert_directories_exist(${CPPXX_THIRD_PARTY_INCLUDE_DIRS})
 
 # only setup the exeternal libraries
 if (CPPXX_REQUIREMENTS)
     return()
 endif()
+
 
 # libraries
 ## private interface
@@ -41,11 +53,7 @@ add_library(cppxx_private INTERFACE)
 add_library(cppxx::private ALIAS cppxx_private)
 
 target_include_directories(cppxx_private INTERFACE
-    "${preprocessor_SOURCE_DIR}/include"
-    "${fmt_SOURCE_DIR}/include"
-    "${cxxopts_SOURCE_DIR}/include"
-    "${toml_SOURCE_DIR}"
-    "${json_SOURCE_DIR}/single_include/nlohmann"
+    ${CPPXX_THIRD_PARTY_INCLUDE_DIRS}
 )
 
 target_compile_definitions(cppxx_private INTERFACE
