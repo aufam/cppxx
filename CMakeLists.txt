@@ -63,6 +63,7 @@ target_compile_definitions(cppxx_private INTERFACE
 target_compile_options(cppxx_private INTERFACE
     -Wall
     -Wextra
+    -Wno-deprecated-literal-operator
     -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=cppxx
     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )

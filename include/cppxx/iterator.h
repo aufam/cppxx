@@ -12,10 +12,9 @@
 
 
 namespace cppxx {
-    using std::views::reverse;
     using std::views::zip;
     using std::views::repeat;
-    using std::views::join;
+    using std::views::single;
     using std::views::join_with;
 
 
@@ -23,6 +22,13 @@ namespace cppxx {
         template <std::ranges::range R>
         friend constexpr auto operator|(R &&r, const iter &) {
             return std::views::all(std::forward<R>(r));
+        }
+    };
+
+    struct reverse {
+        template <std::ranges::range R>
+        friend constexpr auto operator|(R &&r, const reverse &) {
+            return std::views::reverse(std::forward<R>(r));
         }
     };
 
@@ -184,7 +190,7 @@ namespace cppxx {
 
         template <std::ranges::range R>
         friend constexpr auto operator|(R &&r, const map_filter &self) {
-            return std::forward<R>(r) | map(self.fn) | filter([](const auto &item) { return item.has_value(); })
+            return std::forward<R>(r) | map(self.fn) | filter([](const auto &item) { return bool(item); })
                 | map([](auto &&item) { return std::move(*item); });
         }
 
@@ -192,17 +198,23 @@ namespace cppxx {
         F fn;
     };
 
+    struct join {
+        template <std::ranges::range R>
+        friend constexpr auto operator|(R &&r, const join &) {
+            return std::views::join(std::forward<R>(r));
+        }
+    };
 
     template <template <typename...> class Container>
     struct collect {
-        template <std::ranges::input_range R>
+        template <std::ranges::range R>
             requires (not tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>)
         friend constexpr auto operator|(R &&r, const collect &) {
             return Container<std::ranges::range_value_t<std::remove_reference_t<R>>>(
                 std::ranges::begin(r), std::ranges::end(r));
         }
 
-        template <std::ranges::input_range R>
+        template <std::ranges::range R>
             requires tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>
         friend constexpr auto operator|(R &&r, const collect &) {
             return expand_tuple_element_t<std::ranges::range_value_t<std::remove_reference_t<R>>, Container>(

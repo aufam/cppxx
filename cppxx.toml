@@ -25,7 +25,7 @@ flags = ["-O2", "-DNDEBUG"]
 
 
 [crypto]
-link_flags = ["~/libcrypto.a"]
+link_flags = ["-lcrypto"]
 
 
 [preprocessor]
@@ -47,6 +47,7 @@ sources = ["https://github.com/nlohmann/json/releases/download/v${json_version}/
 
 [toml]
 sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v${toml_version}/toml.hpp"]
+flags = ["-Wno-deprecated-literal-operator"]
 
 
 [cxxopts]

@@ -13,7 +13,6 @@ struct Workspace {
         std::string abs_output() const;
     };
 
-    // TODO: rename to target
     struct Target {
         std::string type = "interface";
         std::string base_path;
@@ -34,7 +33,7 @@ struct Workspace {
 
     static auto parse(std::string root_dir = "") -> Workspace;
     // TODO: create populate function to only populate git and archive
-    void configure() const;
+    void configure(int threads) const;
     void build(const std::string &target, const std::string &out) const;
     void clear(const std::string &target) const;
     void generate_compile_commands_json() const;
