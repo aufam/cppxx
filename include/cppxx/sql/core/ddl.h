@@ -10,15 +10,15 @@
 namespace cppxx::sql {
     template <typename T>
     static constexpr literal create_table =
-        literal("create table ") + T::_TableName + literal(" ") + T::_TableContent + literal(";");
+        literal("create table ") + T::_TableDefinition::name + literal(" ") + T::_TableDefinition::content + literal(";");
 
     template <typename T>
     static constexpr literal create_table_if_not_exists =
-        literal("create table if not exists ") + T::_TableName + literal(" ") + T::_TableContent + literal(";");
+        literal("create table if not exists ") + T::_TableDefinition::name + literal(" ") + T::_TableDefinition::content + literal(";");
 
     template <typename T>
     struct alter_table {
-        static constexpr literal alter = literal("alter table ") + T::_TableName + literal(" ");
+        static constexpr literal alter = literal("alter table ") + T::_TableDefinition::name + literal(" ");
 
         template <typename C>
         static constexpr literal add = alter + literal("add ") + C::lit + literal(";");
@@ -35,10 +35,10 @@ namespace cppxx::sql {
     };
 
     template <typename T>
-    constexpr literal drop_table = literal("drop table ") + T::_TableName + literal(";");
+    constexpr literal drop_table = literal("drop table ") + T::_TableDefinition::name + literal(";");
 
     template <typename T>
-    constexpr literal truncate_table = literal("truncate table ") + T::_TableName + literal(";");
+    constexpr literal truncate_table = literal("truncate table ") + T::_TableDefinition::name + literal(";");
 } // namespace cppxx::sql
 
 #endif

@@ -11,7 +11,7 @@
 namespace cppxx::sql {
     template <typename T>
     struct insert_into {
-        static constexpr literal cmd = literal("insert into ") + T::_TableName + literal(" ");
+        static constexpr literal cmd = literal("insert into ") + T::_TableDefinition::name + literal(" ");
 
         template <typename... C>
         static std::string values(const C::type &...vals) {
@@ -24,14 +24,14 @@ namespace cppxx::sql {
 
     template <typename T>
     struct update {
-        static constexpr literal cmd = literal("update ") + T::_TableName + literal(" ");
+        static constexpr literal cmd = literal("update ") + T::_TableDefinition::name + literal(" ");
 
         struct set {
             static constexpr literal set_format = cmd + literal("set {} ");
             std::string setters;
 
             set(std::vector<std::string> vec)
-                : setters(fmt::format("{}", fmt::join(vec, ","))) {}
+                : setters(fmt::format("{}", fmt::join(vec, ", "))) {}
 
             std::string where(const std::string& filters) const {
                 static constexpr literal format_lit = set_format + literal("where {};");

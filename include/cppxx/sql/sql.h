@@ -28,9 +28,16 @@ namespace cppxx::sql::detail {
 namespace cppxx::sql {
     template <typename cpp_type, literal col>
     struct Column {
+    private:
+        using first_split = literal_split<col, " ">;
+        using second_split = literal_split<first_split::second, " ">;
+
+    public:
         using type = cpp_type;
         static constexpr literal lit = col;
-        static constexpr literal name = literal_until<col, " ">;
+        static constexpr literal name = first_split::first;
+        static constexpr literal sql_type = second_split::first;
+        static constexpr literal sql_constraint = second_split::second;
 
         std::string operator=(const type &val) const { return operator_<" = ">(val); }
         sql::detail::Bool operator==(const type &val) const { return operator_<" = ">(val); }
@@ -49,8 +56,11 @@ namespace cppxx::sql {
         }
     };
 
-    template <typename... Cols>
-    static constexpr literal TableContent = literal("(") + literal_join<", ", Cols::lit...> + literal(")");
+    template <literal TableName, typename... Cols>
+    struct TableDefinition {
+        static constexpr literal name = TableName;
+        static constexpr literal content = literal("(") + literal_join<", ", Cols::lit...> + literal(")");
+    };
 } // namespace cppxx::sql
 
 #endif
