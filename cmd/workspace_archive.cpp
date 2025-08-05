@@ -55,7 +55,7 @@ auto Workspace::populate_archive(const std::string &uri_string) -> std::string {
 
         if (not fs::exists(archive_path)) {
             fs::create_directories(archive_dir);
-            const std::string cmd = fmt::format("curl -L -o '{}' '{}' > /dev/null 2>&1", archive_path.string(), uri_string);
+            const std::string cmd = fmt::format("curl -sSfL -o '{}' '{}'", archive_path.string(), uri_string);
             fmt::println(stderr, "[INFO] downloading {:?} to {:?}", uri_string, archive_path.string());
             if (int res = std::system(cmd.c_str()); res != 0)
                 throw std::runtime_error(fmt::format("Failed to download archive from {:?}. Return code: {}", uri_string, res));

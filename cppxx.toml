@@ -1,18 +1,19 @@
 [workspace]
-title = "cppxx"
-version = "v0.1.0"
-author = "aufam"
+title    = "cppxx"
+version  = "v0.1.0"
+author   = "aufam"
 compiler = "c++"
 standard = 23
 
 [workspace.vars]
-build_type      = "${build_type:-debug}"
-boost_version   = "${boost_version:-1.88.0}"
-fmt_version     = "${fmt_version:-11.2.0}"
-json_version    = "${json_version:-3.12.0}"
-toml_version    = "${toml_version:-3.4.0}"
-cxxopts_version = "${cxxopts_version:-3.3.1}"
-gtest_version   = "${gtest_version:-1.17.0}"
+build_type         = "${build_type:-debug}"
+boost_version      = "${boost_version:-1.88.0}"
+fmt_version        = "${fmt_version:-11.2.0}"
+json_version       = "${json_version:-3.12.0}"
+toml_version       = "${toml_version:-3.4.0}"
+cxxopts_version    = "${cxxopts_version:-3.3.1}"
+http_version       = "${http_version:-0.24.0}"
+gtest_version      = "${gtest_version:-1.17.0}"
 
 
 [debug]
@@ -56,6 +57,10 @@ git.tag = "v${cxxopts_version}"
 include_dirs = ["include/"]
 
 
+[http]
+sources = ["https://raw.githubusercontent.com/yhirose/cpp-httplib/v${http_version}/httplib.h"]
+
+
 [gtest]
 type = "static"
 archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
@@ -67,7 +72,7 @@ include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
 sources = ["src/*.cpp"]
 flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
 include_dirs = ["include/"]
-depends_on = ["preprocessor", "fmt", "json", "toml", "crypto"]
+depends_on = ["preprocessor", "fmt", "json", "toml", "crypto", "http"]
 
 
 [core_debug]

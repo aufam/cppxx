@@ -64,7 +64,7 @@ auto Workspace::populate_git(const toml::node &node, const std::string &key) -> 
     }
 
     fmt::println(stderr, "[INFO] cloning {}@{}", host, tag);
-    const std::string cmd = fmt::format("git clone --depth 1 --branch {} {} {} > /dev/null 2>&1", tag, url, result_path.string());
+    const std::string cmd = fmt::format("git -c advice.detachedHead=false clone --quiet --depth 1 --branch '{}' '{}' '{}'", tag, url, result_path.string());
     if (int res = std::system(cmd.c_str()); res != 0)
         throw std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res));
 

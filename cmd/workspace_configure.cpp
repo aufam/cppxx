@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 void Workspace::configure(int threads) const {
     auto compile_commands = targets
-        | cppxx::map([](auto &_, const Target& target) -> std::vector<CompileCommand> {
+        | cppxx::map([](auto &, const Target& target) -> std::vector<CompileCommand> {
             return target.compile_commands
                 | cppxx::map_filter([](const CompileCommand& cc) -> std::optional<CompileCommand> {
                     const fs::path file = cc.file;
