@@ -6,7 +6,7 @@
 
 int main(int argc, char **argv) {
     std::vector<std::string> targets;
-    std::string out;
+    std::string out, file;
     bool clear, cc, info;
     int threads;
 
@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
         .add_option(cc,      'g', "compile-commands", "Generate \"compile_commands.json\"", "false")
         .add_option(threads, 'j', "threads",          "Number of threads",                  "1")
         .add_option(info,    'i', "info",             "Print workspace info as json",       "false")
+        .add_option(file,    'f', "file",             "Execute a cpp file",                 "")
         .parse("cppxx", argc, argv);
 
     targets = targets
@@ -25,6 +26,10 @@ int main(int argc, char **argv) {
 
     const std::string root_dir = "";
     try {
+        if (not file.empty()) {
+            return Workspace::exec(file, cc);
+        }
+
         const auto w = Workspace::parse(root_dir);
         if (cc) {
             w.generate_compile_commands_json();

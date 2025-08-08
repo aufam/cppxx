@@ -10,9 +10,9 @@ static fs::path get_top_level_path_from_tar(const std::string &tar_file) {
     std::vector<std::string> result;
     std::unordered_set<std::string> unique_entries;
 
-    std::string command = "tar tf \"" + tar_file + "\" | cut -d/ -f1 | uniq";
-
+    std::string command = fmt::format("tar tf '{}' | cut -d/ -f1 | uniq", tar_file);
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+
     if (!pipe)
         throw std::runtime_error(fmt::format("Failed to run tar command for {:?}", tar_file));
 

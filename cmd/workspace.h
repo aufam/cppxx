@@ -60,4 +60,7 @@ protected:
     void resolve_dependencies();
 
     static auto encrypt(const std::string &input, size_t length = 10) -> std::string;
+
+public:
+    static int exec(const std::string &file, bool generate_compile_commands);
 };
