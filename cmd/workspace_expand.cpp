@@ -31,7 +31,7 @@ auto Workspace::expand_variables(const std::string &input) const -> std::string 
         } else if (!fallback.empty()) {
             value = fallback;
         } else {
-            std::runtime_error(fmt::format("variable `${{{}}}` is not set and no fallback provided\n", var_name));
+            throw std::runtime_error(fmt::format("variable `${{{}}}` is not set and no fallback provided\n", var_name));
         }
 
         result += value;
