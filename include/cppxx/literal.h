@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <cppxx/tuple.h>
+#include "tuple.h"
 
 
 namespace cppxx {
@@ -96,82 +96,6 @@ namespace cppxx {
     constexpr auto operator+(const literal<N> &lhs, const literal<M> &rhs) {
         return lhs.append(rhs);
     }
-
-
-#if __cplusplus > 202000L
-    template <literal L>
-    struct literal_type;
-
-    template <literal L>
-    using literal_type_t = typename literal_type<L>::type;
-#elif __cplusplus > 201700L
-    template <typename L>
-    struct literal_type;
-
-    template <typename L>
-    using literal_type_t = typename literal_type<L>::type;
-#endif
-
-    template <>
-    struct literal_type<"double"> {
-        using type = double;
-    };
-    template <>
-    struct literal_type<"float"> {
-        using type = float;
-    };
-    template <>
-    struct literal_type<"int32"> {
-        using type = int32_t;
-    };
-    template <>
-    struct literal_type<"int64"> {
-        using type = int64_t;
-    };
-    template <>
-    struct literal_type<"uint32"> {
-        using type = uint32_t;
-    };
-    template <>
-    struct literal_type<"uint64"> {
-        using type = uint64_t;
-    };
-    template <>
-    struct literal_type<"sint32"> {
-        using type = int32_t;
-    };
-    template <>
-    struct literal_type<"sint64"> {
-        using type = int64_t;
-    };
-    template <>
-    struct literal_type<"fixed32"> {
-        using type = uint32_t;
-    };
-    template <>
-    struct literal_type<"fixed64"> {
-        using type = uint64_t;
-    };
-    template <>
-    struct literal_type<"sfixed32"> {
-        using type = int32_t;
-    };
-    template <>
-    struct literal_type<"sfixed64"> {
-        using type = int64_t;
-    };
-    template <>
-    struct literal_type<"bool"> {
-        using type = bool;
-    };
-    template <>
-    struct literal_type<"string"> {
-        using type = std::string;
-    };
-    template <>
-    struct literal_type<"bytes"> {
-        using type = std::vector<uint8_t>;
-    };
 } // namespace cppxx
 
 
