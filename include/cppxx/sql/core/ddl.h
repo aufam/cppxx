@@ -1,44 +1,49 @@
 #ifndef CPPXX_SQL_DDL_H
 #define CPPXX_SQL_DDL_H
 
-#include <cppxx/literal.h>
+#include <cppxx/sql/core/statement.h>
 
 
 /*
  * Data Definition Language
  */
 namespace cppxx::sql {
-    template <typename T>
-    static constexpr literal create_table =
-        literal("create table ") + T::_TableDefinition::name + literal(" ") + T::_TableDefinition::content + literal(";");
+    template <typename Table>
+    static constexpr Statement<literal("create table ") + Table::_TableDefinition::name + literal(" ")
+                               + Table::_TableDefinition::content + literal(";")>
+        create_table = {};
 
-    template <typename T>
-    static constexpr literal create_table_if_not_exists =
-        literal("create table if not exists ") + T::_TableDefinition::name + literal(" ") + T::_TableDefinition::content + literal(";");
+    template <typename Table>
+    static constexpr Statement<literal("create table if not exists ") + Table::_TableDefinition::name + literal(" ")
+                               + Table::_TableDefinition::content + literal(";")>
+        create_table_if_not_exists = {};
 
-    template <typename T>
+    template <typename Table>
     struct alter_table {
-        static constexpr literal alter = literal("alter table ") + T::_TableDefinition::name + literal(" ");
+        static constexpr literal alter = literal("alter table ") + Table::_TableDefinition::name + literal(" ");
 
-        template <typename C>
-        static constexpr literal add = alter + literal("add ") + C::lit + literal(";");
+        template <typename Col>
+        static constexpr Statement<alter + literal("add ") + Col::lit + literal(";")> add = {};
 
-        template <typename C>
-        static constexpr literal drop_column = alter + literal("drop column ") + C::name + literal(";");
+        template <typename Col>
+        static constexpr Statement<alter + literal("drop column ") + Col::name + literal(";")> drop_column = {};
 
-        template <typename CFrom>
+        template <typename ColFrom>
         struct rename_column {
-            template <typename CTo>
-            static constexpr literal to =
-                alter + literal("rename column ") + CFrom::name + literal(" to ") + CTo::name + literal(";");
+            template <typename ColTo>
+            static constexpr Statement<alter + literal("rename column ") + ColFrom::name + literal(" to ") + ColTo::name
+                                       + literal(";")>
+                to = {};
         };
     };
 
-    template <typename T>
-    constexpr literal drop_table = literal("drop table ") + T::_TableDefinition::name + literal(";");
+    template <typename Table>
+    static constexpr Statement<literal("drop table ") + Table::_TableDefinition::name + literal(";")>
+        drop_table = {};
 
-    template <typename T>
-    constexpr literal truncate_table = literal("truncate table ") + T::_TableDefinition::name + literal(";");
+    template <typename Table>
+    static constexpr Statement<literal("truncate table ") + Table::_TableDefinition::name + literal(";")>
+        truncate_table = {};
 } // namespace cppxx::sql
 
 #endif

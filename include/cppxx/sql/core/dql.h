@@ -1,15 +1,20 @@
 #ifndef CPPXX_SQL_DQL_H
 #define CPPXX_SQL_DQL_H
 
-#include <fmt/ranges.h>
-#include <fmt/chrono.h>
-#include <cppxx/sql/core/format.h>
+#include <cppxx/sql/core/statement.h>
 
 /*
  * Data Query Language
  */
 namespace cppxx::sql {
-// TODO
+    template <typename... Cols>
+    struct select {
+        template <typename Table>
+        struct from {};
+    };
+
+    template <typename Table>
+    struct select_all_from {};
 } // namespace cppxx::sql
 
 #endif

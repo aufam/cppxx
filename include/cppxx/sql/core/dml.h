@@ -1,24 +1,21 @@
 #ifndef CPPXX_SQL_DML_H
 #define CPPXX_SQL_DML_H
 
-#include <fmt/ranges.h>
-#include <fmt/chrono.h>
-#include <cppxx/sql/core/format.h>
+#include <cppxx/sql/core/statement.h>
+
 
 /*
  * Data Manipulation Language
  */
 namespace cppxx::sql {
-    template <typename T>
+    template <typename Table, typename... Cols>
     struct insert_into {
-        static constexpr literal cmd = literal("insert into ") + T::_TableDefinition::name + literal(" ");
+        static constexpr literal statement = literal("insert into ") + Table::_TableDefinition::name + literal(" (")
+            + literal_join<", ", Cols::name...> + literal(") values (") + literal_join<", ", Cols::placeholder...>
+            + literal(");");
 
-        template <typename... C>
-        static std::string values(const C::type &...vals) {
-            static constexpr literal format_lit = cmd + literal("(") + literal_join<", ", C::name...>
-                + literal(") values (") + literal_join<", ", format_col<typename C::type>...> + literal(");");
-            static constexpr fmt::format_string<const typename C::type &...> format = format_lit.value;
-            return fmt::format(format, vals...);
+        static constexpr auto values(const Cols::type &...vals) {
+            return Statement<statement, typename Cols::type...>{{vals...}};
         }
     };
 
@@ -26,17 +23,18 @@ namespace cppxx::sql {
     struct update {
         static constexpr literal cmd = literal("update ") + T::_TableDefinition::name + literal(" ");
 
+        template <typename... Statements>
         struct set {
-            static constexpr literal set_format = cmd + literal("set {} ");
-            std::string setters;
+            static constexpr literal set_cmd = cmd + literal("set ");
+            constexpr set(Statements... statements)
+                : statements{statements...} {}
 
-            set(std::vector<std::string> vec)
-                : setters(fmt::format("{}", fmt::join(vec, ", "))) {}
+            std::tuple<Statements...> statements;
 
-            std::string where(const std::string& filters) const {
-                static constexpr literal format_lit = set_format + literal("where {};");
-                static constexpr fmt::format_string<const std::string &, const std::string &> format = format_lit.value;
-                return fmt::format(format, setters, filters);
+            template <typename Condition>
+            constexpr auto where(const Condition &condition) const {
+                return Statement<set_cmd>{} + detail::statement_join_from_tuple<", ">(statements) + Statement<" where ">{} + condition
+                    + Statement<";">{};
             }
         };
     };

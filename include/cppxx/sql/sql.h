@@ -1,29 +1,12 @@
 #ifndef CPPXX_SQL_H
 #define CPPXX_SQL_H
 
-#include <fmt/ranges.h>
-#include <fmt/chrono.h>
 #include <cppxx/sql/core/connection.h>
-#include <cppxx/sql/core/format.h>
+#include <cppxx/sql/core/statement.h>
 #include <cppxx/sql/core/ddl.h>
 #include <cppxx/sql/core/dml.h>
 #include <cppxx/sql/core/dql.h>
 
-
-namespace cppxx::sql::detail {
-    struct Bool {
-        Bool(std::string value)
-            : value(std::move(value)) {}
-
-        operator const std::string &() const { return value; }
-
-        Bool operator&&(const Bool &other) const { return '(' + value + " and " + other.value + ')'; }
-        Bool operator||(const Bool &other) const { return '(' + value + " or " + other.value + ')'; }
-        Bool operator!() const { return "not (" + value + ')'; }
-
-        std::string value;
-    };
-} // namespace cppxx::sql::detail
 
 namespace cppxx::sql {
     template <typename cpp_type, literal col>
@@ -38,22 +21,15 @@ namespace cppxx::sql {
         static constexpr literal name = first_split::first;
         static constexpr literal sql_type = second_split::first;
         static constexpr literal sql_constraint = second_split::second;
+        static constexpr literal placeholder = "?";
 
-        std::string operator=(const type &val) const { return operator_<" = ">(val); }
-        sql::detail::Bool operator==(const type &val) const { return operator_<" = ">(val); }
-        sql::detail::Bool operator!=(const type &val) const { return operator_<" != ">(val); }
-        sql::detail::Bool operator>(const type &val) const { return operator_<" > ">(val); }
-        sql::detail::Bool operator<(const type &val) const { return operator_<" < ">(val); }
-        sql::detail::Bool operator>=(const type &val) const { return operator_<" >= ">(val); }
-        sql::detail::Bool operator<=(const type &val) const { return operator_<" <= ">(val); }
-
-    private:
-        template <literal op>
-        std::string operator_(const type &val) const {
-            static constexpr literal format_lit = name + op + format_col<type>;
-            static constexpr fmt::format_string<const type &> format = format_lit.value;
-            return fmt::format(format, val);
-        }
+        auto operator=(const type &val) const { return Statement<name + literal(" = ?"), type>{{val}}; }
+        auto operator==(const type &val) const { return Statement<name + literal(" = ?"), type>{{val}}; }
+        auto operator!=(const type &val) const { return Statement<name + literal(" != ?"), type>{{val}}; }
+        auto operator>(const type &val) const { return Statement<name + literal(" > ?"), type>{{val}}; }
+        auto operator<(const type &val) const { return Statement<name + literal(" < ?"), type>{{val}}; }
+        auto operator>=(const type &val) const { return Statement<name + literal(" >= ?"), type>{{val}}; }
+        auto operator<=(const type &val) const { return Statement<name + literal(" <= ?"), type>{{val}}; }
     };
 
     template <literal TableName, typename... Cols>
