@@ -2,7 +2,7 @@
 #define CPPXX_SQL_SQLITE3_H
 
 #include <fmt/ranges.h>
-#include <cppxx/sql/sql.h>
+#include "../sql.h"
 #include <sqlite3.h>
 
 
