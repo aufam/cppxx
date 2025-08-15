@@ -58,7 +58,11 @@ namespace cppxx::sql {
 
         template <typename Other, typename... Rest>
         constexpr auto set(const Other &other, const Rest &...rest) const {
-            return *this + Statement<" set ">{} + other + ((Statement<", ">{} + rest) + ...);
+            if constexpr (sizeof...(Rest) == 0) {
+                return *this + Statement<" set ">{} + other;
+            } else {
+                return *this + Statement<" set ">{} + other + ((Statement<", ">{} + rest) + ...);
+            }
         }
 
         template <typename Table>
@@ -69,6 +73,16 @@ namespace cppxx::sql {
         template <typename Col>
         constexpr auto to(const Col &) const {
             return *this + Statement<literal(" to ") + Col::name>{};
+        }
+
+        template <typename Col>
+        constexpr auto add(const Col &) const {
+            return *this + Statement<literal(" add ") + Col::name>{};
+        }
+
+        template <typename Col>
+        constexpr auto drop_column(const Col &) const {
+            return *this + Statement<literal(" drop column ") + Col::name>{};
         }
 
         template <literal alias>
@@ -133,6 +147,9 @@ namespace cppxx::sql {
     static constexpr Statement<literal("create table if not exists ") + Table::Schema::name + literal(" ")
                                + Table::Schema::columns>
         create_table_if_not_exists = {};
+
+    template <typename Table>
+    static constexpr Statement<literal("alter table ") + Table::Schema::name> alter_table = {};
 
     template <typename Table>
     static constexpr Statement<literal("drop table ") + Table::Schema::name> drop_table = {};

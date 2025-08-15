@@ -130,10 +130,10 @@ namespace cppxx::sql::sqlite3 {
                 (detail::bind_one(stmt, I + 1, std::get<I>(statement.placeholders)), ...);
             }(std::index_sequence_for<T...>{});
 
-            return Rows(db, stmt);
+            return {db, stmt};
         }
 
-        virtual ~Connection() {
+        ~Connection() override {
             fmt::println(stderr, "[DEBUG] Closing database");
             sqlite3_close(db);
         }

@@ -47,26 +47,7 @@ TEST(sql, sql) {
         literal("update Users set name = ?, age = ? where (name = ? or (age > ? and id >= ?))"),
         std::tuple{"Tejo", 20, "Sucipto", 10, 10});
 
-    expect_eq_stmt(
-        sql::select<User::Id>.from(User{}).where(User::Age{} > 10), literal("select id from Users where age > ?"), std::tuple{10});
-
-    // {
-    //     auto stmt = sql::Statement<"update Users">{}
-    //                     .set(User::Name{} = "Tejo", User::Age{} = 20)
-    //                     .where(User::Name{} == "Sucipto" or User::Age{} > 10 and User::Id{} >= 10);
-    //     fmt::println("stmt = {}", stmt);
-    // }
-    // {
-    //     auto stmt = insert_into<User>(User::Id{}, User::Name{}, User::Age{}).values({10, "Sucipto", 30});
-    //     fmt::println("stmt = {:?}", stmt.value);
-    //     fmt::println("placeholders = {}", stmt.placeholders);
-    //     fmt::println("values = {}", typeid(decltype(stmt)::values_type).name());
-    // }
-    // {
-    //     auto stmt = sqlselect<User::Id, User::Name>.from(User{});
-    //
-    //     fmt::println("stmt = {:?}", stmt.value);
-    //     fmt::println("placeholders = {}", stmt.placeholders);
-    //     fmt::println("values = {}", stmt.gettest());
-    // }
+    expect_eq_stmt(sql::select<User::Id>.from(User{}).where(User::Age{} > 10),
+                   literal("select id from Users where age > ?"),
+                   std::tuple{10});
 }
