@@ -100,15 +100,15 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
                 w.assign_list(node, node_key, target.link_flags);
             } else if (key == "git") {
                 if (is_remote)
-                    throw std::runtime_error(fmt::format(
-                        "Multiple non local source detected for target {:?}. Please only specify \"git\" or \"archive\"",
-                        target_name));
+                    throw std::runtime_error(fmt::format("Multiple non local source detected for target {:?}. "
+                                                         "Please only specify \"git\" or \"archive\"",
+                                                         target_name));
                 base_path = w.populate_git(node, node_key);
                 is_remote = true;
             } else if (key == "archive") {
                 if (is_remote)
-                    throw std::runtime_error(fmt::format("Multiple remote source detected for target {:?}. Please only specify "
-                                                         "\"git\" or \"archive\", but not both",
+                    throw std::runtime_error(fmt::format("Multiple remote source detected for target {:?}. "
+                                                         "Please only specify \"git\" or \"archive\"",
                                                          target_name));
                 std::string uri;
                 w.assign_string(node, node_key, uri);
@@ -174,10 +174,12 @@ auto Workspace::parse(std::string root_dir) -> Workspace {
                 path = fs::absolute(base_path) / path;
 
             if (is_dir and not fs::is_directory(path))
-                throw std::runtime_error(fmt::format("{:?} which is an include dir for {:?}, is not a directory", path.string(), target_name));
+                throw std::runtime_error(
+                    fmt::format("{:?} which is an include dir for {:?}, is not a directory", path.string(), target_name));
 
             if (not is_dir and not fs::exists(path))
-                throw std::runtime_error(fmt::format("{:?} which is a source file for {:?}, does not exists", path.string(), target_name));
+                throw std::runtime_error(
+                    fmt::format("{:?} which is a source file for {:?}, does not exists", path.string(), target_name));
 
             path_str = path;
         }

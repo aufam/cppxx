@@ -63,7 +63,7 @@ namespace cppxx::cli {
 } // namespace cppxx::cli
 
 // jarro2783/cxxopts interopt
-#ifdef CXXOPTS_HPP_INCLUDED
+#if defined (CXXOPTS_HPP_INCLUDED) && defined (FMT_RANGES_H_)
 namespace cppxx::cli::detail {
     template <typename T>
     struct is_optional : std::false_type {};
