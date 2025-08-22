@@ -1,6 +1,8 @@
 #include <fmt/ranges.h>
 #include <cxxopts.hpp>
 #include <cppxx/cli/options.h>
+#include <cppxx/defer.h>
+#include <cppxx/match.h>
 #include "workspace.h"
 
 
@@ -68,7 +70,7 @@ struct Build : Base {
 };
 
 struct Info : Base {
-    std::optional<std::string> file, root;
+    std::optional<std::string> root;
 
     Info(const std::string &name, int argc, char **argv) {
         cppxx::cli::parse(name, argc, argv, {
@@ -104,29 +106,27 @@ struct Clear : Base {
 int main(int argc, char **argv) {
     std::string subcommand;
     const std::vector<cppxx::cli::Option> opts = {
-        {.target = &subcommand,
-         .key_str = "subcommand",
-         .help = "Subcommand",
-         .is_positional = true,
-         .one_of = {"run", "build", "cc", "info", "clear"}}
+        {.target = &subcommand, .key_str = "subcommand", .help = "Subcommand", .is_positional = true, .one_of = {"run", "build", "cc", "info", "clear"}}
     };
-    cppxx::cli::parse("cppxx", std::min(argc, 2), argv, opts);
+    auto res = cppxx::cli::parse("cppxx", std::min(2, argc), argv, opts);
+    fmt::println(stderr, "[DEBUG] res = {}", res);
 
-    std::unique_ptr<Base> app;
-    if (subcommand == "run") {
-        app = std::make_unique<Run>("Compile and run a cpp file in one go", argc - 1, argv + 1);
-    } else if (subcommand == "build") {
-        app = std::make_unique<Build>("Build a target specified by cppxx.toml", argc - 1, argv + 1);
-    } else if (subcommand == "cc") {
-        app = std::make_unique<GenerateCompileCommands>("Generate compile_commands.json", argc - 1, argv + 1);
-    } else if (subcommand == "clear") {
-        app = std::make_unique<Clear>("Clear build cache for specified targets", argc - 1, argv + 1);
-    } else if (subcommand == "info") {
-        app = std::make_unique<Info>("Print info as json string of current cppxx workspace", argc - 1, argv + 1);
-    }
+    auto argv0 = fmt::format("{} {}", argv[0], argv[1]);
+    argv += 1;
+    argv[0] = argv0.data();
+    argc -= 1;
+
+    const auto cmd = cppxx::match<Base *>(subcommand, {
+        {"run",   [&]() { return new Run("Compile and run a cpp file in one go", argc, argv); }                 },
+        {"build", [&]() { return new Build("Build a target specified by cppxx.toml", argc, argv); }             },
+        {"cc",    [&]() { return new GenerateCompileCommands("Generate compile_commands.json", argc, argv); }   },
+        {"clear", [&]() { return new Clear("Clear build cache for specified targets", argc, argv); }            },
+        {"info",  [&]() { return new Info("Print info as json string of current cppxx workspace", argc, argv); }},
+    });
+    cppxx::defer _ = [cmd]() { delete cmd; };
 
     try {
-        app->exec();
+        cmd->exec();
     } catch (const std::exception &e) {
         fmt::println(stderr, "[ERROR] {}", e.what());
         return 1;

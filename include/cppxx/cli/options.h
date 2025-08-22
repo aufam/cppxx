@@ -34,8 +34,8 @@ namespace cppxx::cli {
         std::unordered_set<std::variant<int, std::string>> one_of = {};
     };
 
-    inline void parse(const std::string &app_name, int argc, char **argv, const std::vector<Option> &options);
-    inline void parse_or_throw(const std::string &app_name, int argc, char **argv, const std::vector<Option> &options);
+    inline std::vector<std::string> parse(const std::string &app_name, int argc, char **argv, const std::vector<Option> &options);
+    inline std::vector<std::string> parse_or_throw(const std::string &app_name, int argc, char **argv, const std::vector<Option> &options);
 
     class parse_error : public std::exception {
     public:
@@ -62,8 +62,9 @@ namespace cppxx::cli {
     };
 } // namespace cppxx::cli
 
+
 // jarro2783/cxxopts interopt
-#if defined (CXXOPTS_HPP_INCLUDED) && defined (FMT_RANGES_H_)
+#if defined(CXXOPTS_HPP_INCLUDED) && defined(FMT_RANGES_H_)
 namespace cppxx::cli::detail {
     template <typename T>
     struct is_optional : std::false_type {};
@@ -71,28 +72,7 @@ namespace cppxx::cli::detail {
     template <typename T>
     struct is_optional<std::optional<T>> : std::true_type {};
 
-    template <typename T>
-    void visitor_setup(const T *target, cxxopts::OptionAdder &add, const cppxx::cli::Option &opt) {
-        std::shared_ptr<cxxopts::Value> val;
-        std::string help = opt.help;
-        if constexpr (is_optional<T>::value) {
-            val = cxxopts::value<typename T::value_type>();
-            if (not help.empty()) {
-                if (target->has_value()) {
-                    help = fmt::format("{} (default: {})", help, target->value());
-                } else {
-                    help = fmt::format("{} (default: <not set>)", help);
-                }
-            }
-        } else {
-            val = cxxopts::value<T>();
-        }
-        std::string key = opt.key_char == '\0' ? opt.key_str : fmt::format("{},{}", opt.key_char, opt.key_str);
-        add(key, help, val);
-    }
-
-    template <typename T>
-    void visitor_target(T *target, const cxxopts::ParseResult &parser, const cppxx::cli::Option &opt) {
+    inline std::pair<std::unordered_set<int>, std::unordered_set<std::string>> get_one_of_sets(const cppxx::cli::Option &opt) {
         std::unordered_set<int> one_of_int;
         std::unordered_set<std::string> one_of_str;
         for (const auto &one : opt.one_of) {
@@ -102,6 +82,36 @@ namespace cppxx::cli::detail {
                 one_of_str.emplace(std::get<std::string>(one));
             }
         }
+
+        return {std::move(one_of_int), std::move(one_of_str)};
+    }
+
+    template <typename T>
+    void visitor_setup(const T *target, cxxopts::OptionAdder &add, const cppxx::cli::Option &opt) {
+        std::shared_ptr<cxxopts::Value> val;
+        std::string help = opt.help;
+        if constexpr (is_optional<T>::value) {
+            val = cxxopts::value<typename T::value_type>();
+            if (target->has_value())
+                help = fmt::format("{}{}(default: {})", help, help.empty() ? "" : " ", target->value());
+        } else {
+            val = cxxopts::value<T>();
+            help = fmt::format("{}{}(required)", help, help.empty() ? "" : " ");
+        }
+
+        if (not opt.one_of.empty()) {
+            auto [one_of_int, one_of_str] = get_one_of_sets(opt);
+            help = fmt::format("{}{}(value: {{{}{:?}}})", help, help.empty() ? "" : " ", fmt::join(one_of_int, ", "),
+                               fmt::join(one_of_str, ", "));
+        }
+
+        std::string key = opt.key_char == '\0' ? opt.key_str : fmt::format("{},{}", opt.key_char, opt.key_str);
+        add(key, help, val);
+    }
+
+    template <typename T>
+    void visitor_target(T *target, const cxxopts::ParseResult &parser, const cppxx::cli::Option &opt) {
+        auto [one_of_int, one_of_str] = get_one_of_sets(opt);
 
         if constexpr (is_optional<T>::value) {
             if (parser.count(opt.key_str)) {
@@ -131,9 +141,10 @@ namespace cppxx::cli::detail {
     }
 } // namespace cppxx::cli::detail
 
-inline void cppxx::cli::parse(const std::string &app_name, int argc, char **argv, const std::vector<Option> &opts) {
+inline std::vector<std::string>
+cppxx::cli::parse(const std::string &app_name, int argc, char **argv, const std::vector<Option> &opts) {
     try {
-        parse_or_throw(app_name, argc, argv, opts);
+        return parse_or_throw(app_name, argc, argv, opts);
     } catch (const parse_help &e) {
         fmt::println(stderr, "{}", e.what());
         exit(0);
@@ -143,25 +154,22 @@ inline void cppxx::cli::parse(const std::string &app_name, int argc, char **argv
     }
 }
 
-inline void cppxx::cli::parse_or_throw(const std::string &app_name, int argc, char **argv, const std::vector<Option> &opts) {
-    std::vector<std::string> positionals;
-    std::string positional_help;
-
+inline std::vector<std::string>
+cppxx::cli::parse_or_throw(const std::string &app_name, int argc, char **argv, const std::vector<Option> &opts) {
     cxxopts::Options options(argv[0], app_name);
+
     auto add = options.add_options();
+    std::vector<std::string> positionals;
     for (const auto &opt : opts) {
         std::visit([&](auto *target) { detail::visitor_setup(target, add, opt); }, opt.target);
-
-        if (opt.is_positional) {
+        if (opt.is_positional)
             positionals.push_back(opt.key_str);
-            positional_help += " [" + opt.key_str + "]";
-        }
     }
     add("h,help", "Print help");
 
-    if (!positionals.empty()) {
+    if (not positionals.empty()) {
         options.parse_positional(positionals);
-        options.positional_help(positional_help);
+        options.positional_help(fmt::format("<{}>", fmt::join(positionals, "> <")));
         options.show_positional_help();
     }
 
@@ -172,6 +180,7 @@ inline void cppxx::cli::parse_or_throw(const std::string &app_name, int argc, ch
 
         for (const auto &opt : opts)
             std::visit([&](auto *target) { detail::visitor_target(target, parser, opt); }, opt.target);
+        return parser.unmatched();
     } catch (const cxxopts::exceptions::exception &e) {
         throw parse_error(fmt::format("Failed to parse options: {}", e.what()));
     }
