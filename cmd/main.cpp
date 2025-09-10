@@ -1,4 +1,6 @@
 #include <fmt/ranges.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <cxxopts.hpp>
 #include <cppxx/cli/options.h>
 #include <cppxx/defer.h>
@@ -104,12 +106,13 @@ struct Clear : Base {
 // clang-format on
 
 int main(int argc, char **argv) {
+    spdlog::set_default_logger(spdlog::stderr_color_mt("stderr_logger"));
+
     std::string subcommand;
     const std::vector<cppxx::cli::Option> opts = {
         {.target = &subcommand, .key_str = "subcommand", .help = "Subcommand", .is_positional = true, .one_of = {"run", "build", "cc", "info", "clear"}}
     };
-    auto res = cppxx::cli::parse("cppxx", std::min(2, argc), argv, opts);
-    fmt::println(stderr, "[DEBUG] res = {}", res);
+    cppxx::cli::parse("cppxx", std::min(2, argc), argv, opts);
 
     auto argv0 = fmt::format("{} {}", argv[0], argv[1]);
     argv += 1;
@@ -128,7 +131,7 @@ int main(int argc, char **argv) {
     try {
         cmd->exec();
     } catch (const std::exception &e) {
-        fmt::println(stderr, "[ERROR] {}", e.what());
+        spdlog::error(e.what());
         return 1;
     }
 

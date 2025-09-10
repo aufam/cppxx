@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(cppxx
     VERSION     0.1.0
     DESCRIPTION "Complete C++ framework"
-    LANGUAGES   CXX
+    LANGUAGES   C CXX
 )
 
 # some options
@@ -30,7 +30,7 @@ target_include_directories(cppxx INTERFACE
 
 target_compile_features(cppxx INTERFACE cxx_std_23)
 
-if (NOT CPPXX_BUILD_CMD AND NOT CPPXX_BUILD_TESTS)
+if (NOT CPPXX_BUILD_CMD AND NOT CPPXX_BUILD_TESTS AND NOT CPPXX_REQUIREMENTS)
     return()
 endif()
 
@@ -42,8 +42,8 @@ cppxx_github_package("spdlog:gabime/spdlog#v1.15.3"                  DOWNLOAD_ON
 cppxx_github_package("toml:marzer/tomlplusplus#v3.4.0"               DOWNLOAD_ONLY YES)
 cppxx_github_package("json:nlohmann/json#v3.12.0"                    DOWNLOAD_ONLY YES)
 cppxx_github_package("opts:jarro2783/cxxopts#v3.3.1"                 DOWNLOAD_ONLY YES)
+cppxx_github_package("sha256:LekKit/sha256#master"                   DOWNLOAD_ONLY YES)
 cppxx_github_package("googletest:google/googletest#v1.17.0"          OPTIONS "INSTALL_GTEST OFF")
-cppxx_github_package("openssl:janbar/openssl-cmake#1.1.1w-20250419"  OPTIONS "WITH_APPS OFF")
 
 set(CPPXX_THIRD_PARTY_INCLUDE_DIRS
     "${fmt_SOURCE_DIR}/include"
@@ -51,6 +51,7 @@ set(CPPXX_THIRD_PARTY_INCLUDE_DIRS
     "${json_SOURCE_DIR}/single_include/nlohmann"
     "${toml_SOURCE_DIR}"
     "${opts_SOURCE_DIR}/include"
+    "${sha256_SOURCE_DIR}"
 )
 cppxx_assert_directories_exist(${CPPXX_THIRD_PARTY_INCLUDE_DIRS})
 
@@ -60,34 +61,31 @@ if (CPPXX_REQUIREMENTS)
 endif()
 
 
-# private interface
-add_library(cppxx_private INTERFACE)
+# private component
+add_library(cppxx_private STATIC "${sha256_SOURCE_DIR}/sha256.c")
 add_library(cppxx::private ALIAS cppxx_private)
+set_target_properties(cppxx_private PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(cppxx_private INTERFACE
+target_include_directories(cppxx_private PUBLIC
     ${CPPXX_THIRD_PARTY_INCLUDE_DIRS}
 )
 
-target_link_libraries(cppxx_private INTERFACE
-    crypto
-)
-
-target_compile_definitions(cppxx_private INTERFACE
+target_compile_definitions(cppxx_private PUBLIC
     -DFMT_HEADER_ONLY=1
     -DSPDLOG_FMT_EXTERNAL=1
 )
 
-target_compile_options(cppxx_private INTERFACE
+target_compile_options(cppxx_private PUBLIC
     -Wall
     -Wextra
-    -Wno-deprecated-literal-operator
     -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=cppxx
     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )
 
-target_link_options(cppxx_private INTERFACE
+target_link_options(cppxx_private PUBLIC
     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )
+
 
 # executable
 if (CPPXX_BUILD_CMD)
@@ -98,11 +96,24 @@ if (CPPXX_BUILD_CMD)
         cppxx
         cppxx_private
     )
+
+    target_link_options(cmd PRIVATE
+        $<$<CONFIG:Release>:-static>
+    )
 endif()
+
 
 # tests
 if (CPPXX_BUILD_TESTS)
-	add_subdirectory(tests)
+    file(GLOB_RECURSE TEST_SOURCES tests/*)
+    add_executable(test_all ${TEST_SOURCES})
+
+    target_link_libraries(test_all PRIVATE
+        cppxx
+        cppxx_private
+        gtest_main
+    )
+
 	enable_testing()
 	add_test(NAME test_all COMMAND test_all)
 endif()
