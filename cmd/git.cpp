@@ -1,7 +1,8 @@
 #include <fmt/ranges.h>
+#include <spdlog/spdlog.h>
 #include <regex>
 #include <filesystem>
-#include "workspace.h"
+#include "git.h"
 
 namespace fs = std::filesystem;
 
@@ -19,11 +20,12 @@ static std::string extract_host_and_path(const std::string &url) {
     if (std::regex_match(cleaned, ssh_match, ssh_pattern))
         return ssh_match[1].str() + "/" + ssh_match[2].str();
 
-    // Handle https://github.com/user/repo or http://...
-    static const std::regex https_pattern(R"(https?://([^/]+)/(.+))");
+    // Handle https://[user[:password]@]github.com/user/repo
+    static const std::regex https_pattern(R"(https?://(?:[^@]+@)?([^/]+)/(.+))");
     std::smatch https_match;
-    if (std::regex_match(cleaned, https_match, https_pattern))
+    if (std::regex_match(cleaned, https_match, https_pattern)) {
         return https_match[1].str() + "/" + https_match[2].str();
+    }
 
     // Handle github.com/user/repo or user/repo
     return cleaned;
@@ -49,24 +51,25 @@ static std::string normalize_git_url(const std::string &url) {
     return "https://github.com/" + url;
 }
 
-auto Workspace::populate_git(const toml::node &node, const std::string &key) -> std::string {
-    if (not node.is_table() or not node.as_table()->contains("url") or not node.as_table()->contains("tag"))
-        throw std::runtime_error(fmt::format("{:?} must be a table containing \"url\" and \"tag\"", key));
+std::string Git::as_key() const {
+    return url + '@' + tag;
+}
 
-    const std::string url = normalize_git_url(expand_variables(node.as_table()->at("url").value_or("")));
-    const std::string tag = expand_variables(node.as_table()->at("tag").value_or(""));
+std::expected<std::string, std::runtime_error> Git::clone(const std::string &cache) const {
+    const std::string url = normalize_git_url(this->url);
     const std::string host = extract_host_and_path(url);
 
-    const fs::path result_path = fs::path(cppxx_cache) / host / tag;
+    fs::path result_path = fs::path(cache) / host / tag;
     if (fs::exists(result_path)) {
         // TODO: check if the result_path is dirty or needs update
         return result_path;
     }
 
-    fmt::println(stderr, "[INFO] cloning {}@{}", host, tag);
-    const std::string cmd = fmt::format("git -c advice.detachedHead=false clone --quiet --depth 1 --branch '{}' '{}' '{}'", tag, url, result_path.string());
+    spdlog::info("cloning {}@{}", host, tag);
+    const std::string cmd = fmt::format("git -c advice.detachedHead=false clone --quiet --depth 1 --branch '{}' '{}' '{}'", tag,
+                                        url, result_path.string());
     if (int res = std::system(cmd.c_str()); res != 0)
-        throw std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res));
+        return std::unexpected(std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res)));
 
     return result_path;
 }

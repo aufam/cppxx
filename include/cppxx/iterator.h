@@ -12,10 +12,10 @@
 
 
 namespace cppxx {
-    using std::views::zip;
+    using std::views::join_with;
     using std::views::repeat;
     using std::views::single;
-    using std::views::join_with;
+    using std::views::zip;
 
 
     struct iter {
@@ -208,10 +208,9 @@ namespace cppxx {
     template <template <typename...> class Container>
     struct collect {
         template <std::ranges::range R>
-            requires (not tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>)
+            requires(not tuple_like<std::ranges::range_value_t<std::remove_reference_t<R>>>)
         friend constexpr auto operator|(R &&r, const collect &) {
-            return Container<std::ranges::range_value_t<std::remove_reference_t<R>>>(
-                std::ranges::begin(r), std::ranges::end(r));
+            return Container<std::ranges::range_value_t<std::remove_reference_t<R>>>(std::ranges::begin(r), std::ranges::end(r));
         }
 
         template <std::ranges::range R>

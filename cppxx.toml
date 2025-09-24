@@ -1,91 +1,100 @@
-[workspace]
 title    = "cppxx"
 version  = "v0.1.0"
 author   = "aufam"
 compiler = "c++"
 standard = 23
 
-[workspace.vars]
-build_type         = "${build_type:-debug}"
-fmt_version        = "${fmt_version:-11.2.0}"
-spdlog_version     = "${spdlog_version:-1.15.3}"
-json_version       = "${json_version:-3.12.0}"
-toml_version       = "${toml_version:-3.4.0}"
-cxxopts_version    = "${cxxopts_version:-3.3.1}"
-gtest_version      = "${gtest_version:-1.17.0}"
+
+[vars]
+build_type      = "debug"
+fmt_version     = "11.2.0"
+spdlog_version  = "1.15.3"
+toml_version    = "3.4.0"
+reflect_version = "0.20.0"
+cxxopts_version = "3.3.1"
+gtest_version   = "1.17.0"
 
 
-[debug]
-flags = ["-g", "-fsanitize=address,undefined"]
+[interface.debug]
+flags      = ["-g", "-fsanitize=address,undefined"]
 link_flags = ["-fsanitize=address,undefined"]
 
 
-[release]
-flags = ["-O2", "-DNDEBUG"]
+[interface.release]
+flags      = ["-O2", "-DNDEBUG"]
 link_flags = ["-static"]
 
 
-[fmt]
-git.url = "fmtlib/fmt"
-git.tag = "${fmt_version}"
-include_dirs = ["include/"]
-flags = ["-DFMT_HEADER_ONLY=1"]
-
-
-[spdlog]
-git.url = "gabime/spdlog"
-git.tag = "v${spdlog_version}"
-include_dirs = ["include/"]
-flags = ["-DSPDLOG_FMT_EXTERNAL=1"]
-
-
-[json]
-sources = ["https://github.com/nlohmann/json/releases/download/v${json_version}/json.hpp"]
-
-
-[toml]
-sources = ["https://raw.githubusercontent.com/marzer/tomlplusplus/v${toml_version}/toml.hpp"]
-
-
-[cxxopts]
-git.url = "jarro2783/cxxopts"
-git.tag = "v${cxxopts_version}"
-include_dirs = ["include/"]
-
-
-[sha256]
-git.url = "LekKit/sha256"
-git.tag = "master"
-sources = ["sha256.c", "sha256.h"]
-
-
-[gtest]
-archive = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
-sources = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
-include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
-
-
-[core]
-flags = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
-include_dirs = ["include/"]
-depends_on = ["fmt", "spdlog", "json", "toml", "cxxopts", "sha256"]
-
-
-[core_debug]
+[interface.core_debug]
 depends_on = ["core", "debug"]
 
 
-[core_release]
+[interface.core_release]
 depends_on = ["core", "release"]
 
 
-[cppxx]
-type = "executable"
-sources = ["cmd/*.cpp"]
+[lib.fmt]
+git.url      = "fmtlib/fmt"
+git.tag      = "${fmt_version}"
+include_dirs = ["include/"]
+flags        = ["-DFMT_HEADER_ONLY=1"]
+
+
+[lib.spdlog]
+git.url      = "gabime/spdlog"
+git.tag      = "v${spdlog_version}"
+include_dirs = ["include/"]
+flags        = ["-DSPDLOG_FMT_EXTERNAL=1"]
+
+
+[lib.toml]
+git.url      = "marzer/tomlplusplus"
+git.tag      = "v${toml_version}"
+include_dirs = ["include/"]
+
+
+[lib.reflect]
+git.url      = "getml/reflect-cpp"
+git.tag      = "v${reflect_version}"
+sources      = ["src/reflectcpp.cpp", "src/reflectcpp_json.cpp", "src/reflectcpp_toml.cpp", "src/yyjson.c"]
+include_dirs = { public = ["include/"], private = ["include/rfl/thirdparty"] }
+depends_on   = ["toml"]
+
+[lib.reflect.flags]
+private      = ["-include ${PWD}/reflectcpp/reflectcpp.h", "-Wno-unused-parameter", "-Wno-missing-field-initializers"]
+public       = ["-DREFLECTCPP_USE_STD_EXPECTED"]
+
+
+[lib.cxxopts]
+git.url      = "jarro2783/cxxopts"
+git.tag      = "v${cxxopts_version}"
+include_dirs = ["include/"]
+
+
+[lib.sha256]
+git.url      = "LekKit/sha256"
+git.tag      = "master"
+sources      = ["sha256.c"]
+include_dirs = [""]
+
+
+[lib.gtest]
+archive      = "https://github.com/google/googletest/releases/download/v${gtest_version}/googletest-${gtest_version}.tar.gz"
+sources      = ["googletest/src/gtest-all.cc", "googletest/src/gtest_main.cc"]
+include_dirs = { public = ["googletest/include/"], private = ["googletest/"] }
+
+
+[lib.core]
+flags        = ["-Wall", "-Wextra", "-fmacro-prefix-map=${PWD}=cppxx"]
+include_dirs = ["include/"]
+depends_on   = ["fmt", "spdlog", "toml", "reflect", "cxxopts", "sha256"]
+
+
+[bin.cppxx]
+sources    = ["cmd/*.cpp"]
 depends_on = ["core_${build_type}"]
 
 
-[test]
-type = "executable"
-sources = ["tests/*.cpp"]
+[bin.test]
+sources    = ["tests/*.cpp"]
 depends_on = ["core_debug", "gtest"]

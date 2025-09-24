@@ -43,15 +43,17 @@ cppxx_github_package("toml:marzer/tomlplusplus#v3.4.0"               DOWNLOAD_ON
 cppxx_github_package("json:nlohmann/json#v3.12.0"                    DOWNLOAD_ONLY YES)
 cppxx_github_package("opts:jarro2783/cxxopts#v3.3.1"                 DOWNLOAD_ONLY YES)
 cppxx_github_package("sha256:LekKit/sha256#master"                   DOWNLOAD_ONLY YES)
+cppxx_github_package("reflect:getml/reflect-cpp#v0.20.0"             DOWNLOAD_ONLY YES)
 cppxx_github_package("googletest:google/googletest#v1.17.0"          OPTIONS "INSTALL_GTEST OFF")
 
 set(CPPXX_THIRD_PARTY_INCLUDE_DIRS
     "${fmt_SOURCE_DIR}/include"
     "${spdlog_SOURCE_DIR}/include"
     "${json_SOURCE_DIR}/single_include/nlohmann"
-    "${toml_SOURCE_DIR}"
+    "${toml_SOURCE_DIR}/include"
     "${opts_SOURCE_DIR}/include"
     "${sha256_SOURCE_DIR}"
+    "${reflect_SOURCE_DIR}/include"
 )
 cppxx_assert_directories_exist(${CPPXX_THIRD_PARTY_INCLUDE_DIRS})
 
@@ -61,24 +63,42 @@ if (CPPXX_REQUIREMENTS)
 endif()
 
 
-# private component
-add_library(cppxx_private STATIC "${sha256_SOURCE_DIR}/sha256.c")
+# private components
+add_library(cppxx_private STATIC
+    "${sha256_SOURCE_DIR}/sha256.c"
+    "${reflect_SOURCE_DIR}/src/reflectcpp.cpp"
+    "${reflect_SOURCE_DIR}/src/reflectcpp_json.cpp"
+    "${reflect_SOURCE_DIR}/src/reflectcpp_toml.cpp"
+    "${reflect_SOURCE_DIR}/src/yyjson.c"
+)
 add_library(cppxx::private ALIAS cppxx_private)
 set_target_properties(cppxx_private PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(cppxx_private PRIVATE cxx_std_23)
 
-target_include_directories(cppxx_private PUBLIC
-    ${CPPXX_THIRD_PARTY_INCLUDE_DIRS}
+target_include_directories(cppxx_private
+    PUBLIC
+        ${CPPXX_THIRD_PARTY_INCLUDE_DIRS}
+    PRIVATE
+        "${reflect_SOURCE_DIR}/include/rfl/thirdparty"
+)
+
+target_compile_options(cppxx_private PRIVATE
+    -include "${CMAKE_CURRENT_SOURCE_DIR}/reflectcpp/reflectcpp.h"
+    -Wno-unused-parameter
+    -Wno-missing-field-initializers
 )
 
 target_compile_definitions(cppxx_private PUBLIC
     -DFMT_HEADER_ONLY=1
     -DSPDLOG_FMT_EXTERNAL=1
+    -DREFLECTCPP_USE_STD_EXPECTED
 )
 
 target_compile_options(cppxx_private PUBLIC
     -Wall
     -Wextra
     -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=cppxx
+    $<$<COMPILE_LANGUAGE:CXX>:-Wno-redundant-move>
     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )
 

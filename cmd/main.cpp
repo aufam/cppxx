@@ -1,117 +1,25 @@
 #include <fmt/ranges.h>
+#include <rfl/toml.hpp>
+#include <rfl/json.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <cxxopts.hpp>
-#include <cppxx/cli/options.h>
-#include <cppxx/defer.h>
 #include <cppxx/match.h>
-#include "workspace.h"
+#include "options.h"
 
-
-struct Base {
-    Base() = default;
-    virtual ~Base() = default;
-
-    virtual void exec() = 0;
-};
-
-// clang-format off
-struct Run : Base {
-    std::string file;
-
-    Run(const std::string &name, int argc, char **argv) {
-        cppxx::cli::parse( name, argc, argv, {
-            {.target = &file, .key_char = 'f', .key_str = "file", .help = "Specify a cpp file", .is_positional = true},
-        });
-    }
-
-    void exec() override { Workspace::exec(file, false); }
-};
-
-struct GenerateCompileCommands : Base {
-    std::optional<std::string> file, root;
-
-    GenerateCompileCommands(const std::string &name, int argc, char **argv) {
-        cppxx::cli::parse(name, argc, argv, {
-            { .target = &file, .key_char = 'f', .key_str = "file", .help = "A cpp file or this project if not specified", },
-            { .target = &root, .key_str = "root", .help = "Specify root dir containing cppxx.toml", },
-        });
-    }
-
-    void exec() override {
-        if (file) {
-            Workspace::exec(*file, true);
-            return;
-        }
-
-        const auto w = Workspace::parse(root.value_or(""));
-        w.generate_compile_commands_json();
-    }
-};
-
-struct Build : Base {
-    std::string target;
-    std::string out;
-    std::optional<int> threads = 2;
-    std::optional<std::string> root;
-
-    Build(const std::string &name, int argc, char **argv) {
-        cppxx::cli::parse(name, argc, argv, {
-            { .target = &target, .key_char = 't', .key_str = "target", .help = "Specify an executable or lib target", .is_positional = true, },
-            { .target = &out, .key_char = 'o', .key_str = "out", .help = "Specify output name", },
-            { .target = &threads, .key_char = 'j', .key_str = "threads", .help = "Number of threads", },
-            { .target = &root, .key_str = "root", .help = "Specify root dir containing cppxx.toml", },
-        });
-    }
-
-    void exec() override {
-        const auto w = Workspace::parse(root.value_or(""));
-        w.configure(*threads);
-        w.build(target, out);
-    }
-};
-
-struct Info : Base {
-    std::optional<std::string> root;
-
-    Info(const std::string &name, int argc, char **argv) {
-        cppxx::cli::parse(name, argc, argv, {
-            { .target = &root, .key_str = "root", .help = "Specify root dir containing cppxx.toml", },
-        });
-    }
-
-    void exec() override {
-        const auto w = Workspace::parse(root.value_or(""));
-        w.print_info();
-    }
-};
-
-struct Clear : Base {
-    std::vector<std::string> target;
-    std::optional<std::string> root;
-
-    Clear(const std::string &name, int argc, char **argv) {
-        cppxx::cli::parse(name, argc, argv, {
-            { .target = &target, .key_char = 't', .key_str = "target", .help = "Specify target", .is_positional = true, },
-            { .target = &root, .key_str = "root", .help = "Specify root dir containing cppxx.toml", },
-        });
-    }
-
-    void exec() override {
-        const auto w = Workspace::parse(root.value_or(""));
-        for (auto &t : target)
-            w.clear(t);
-    }
-};
-// clang-format on
 
 int main(int argc, char **argv) {
-    spdlog::set_default_logger(spdlog::stderr_color_mt("stderr_logger"));
+    spdlog::set_default_logger(spdlog::stderr_color_mt("cppxx"));
+    spdlog::set_pattern("[%^%l%$] %v");
 
     std::string subcommand;
     const std::vector<cppxx::cli::Option> opts = {
-        {.target = &subcommand, .key_str = "subcommand", .help = "Subcommand", .is_positional = true, .one_of = {"run", "build", "cc", "info", "clear"}}
+        {.target = &subcommand,
+         .key_str = "subcommand",
+         .help = "Subcommand",
+         .is_positional = true,
+         .one_of = {"build", "run", "cc", "add", "schema"}}
     };
+
     cppxx::cli::parse("cppxx", std::min(2, argc), argv, opts);
 
     auto argv0 = fmt::format("{} {}", argv[0], argv[1]);
@@ -119,19 +27,18 @@ int main(int argc, char **argv) {
     argv[0] = argv0.data();
     argc -= 1;
 
-    const auto cmd = cppxx::match<Base *>(subcommand, {
-        {"run",   [&]() { return new Run("Compile and run a cpp file in one go", argc, argv); }                 },
-        {"build", [&]() { return new Build("Build a target specified by cppxx.toml", argc, argv); }             },
-        {"cc",    [&]() { return new GenerateCompileCommands("Generate compile_commands.json", argc, argv); }   },
-        {"clear", [&]() { return new Clear("Clear build cache for specified targets", argc, argv); }            },
-        {"info",  [&]() { return new Info("Print info as json string of current cppxx workspace", argc, argv); }},
+    const auto res = cppxx::match<std::expected<void, std::runtime_error>>(
+        subcommand,
+        {
+            {"build",  [&]() { return Build("Build a target specified by cppxx.toml", argc, argv).exec(); }          },
+            {"run",    [&]() { return Run("Run a single cpp file", argc, argv).exec(); }                             },
+            {"cc",     [&]() { return GenerateCompileCommands("Generate compile_commands.json", argc, argv).exec(); }},
+            {"add",    [&]() { return Add("Add an archive or a git repository", argc, argv).exec(); }                },
+            {"schema", [&]() { return Schema("Generate json schema for cppxx.json", argc, argv).exec(); }            },
     });
-    cppxx::defer _ = [cmd]() { delete cmd; };
 
-    try {
-        cmd->exec();
-    } catch (const std::exception &e) {
-        spdlog::error(e.what());
+    if (not res) {
+        spdlog::error("{}", res.error().what());
         return 1;
     }
 
