@@ -89,7 +89,12 @@ struct Run : Base {
              .is_positional = true,
              },
         };
-        args = cppxx::cli::parse(name, argc, argv, options);
+        cppxx::cli::parse(name, std::min(argc, 2), argv, options);
+
+        argc -= 1;
+        argv += 1;
+        for (int i = 1; i < argc; ++i)
+            args.emplace_back(argv[i]);
     }
 
     std::expected<void, std::runtime_error> exec() override;

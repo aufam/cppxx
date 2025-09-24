@@ -18,31 +18,22 @@ std::expected<void, std::runtime_error> Run::exec() {
     if (not fs::exists(file))
         return cppxx::unexpected_errorf("File {:?} does not exist", file);
 
-    const Workspace w = {
-        .compiler = "c++",
-        .standard = 23,
-        .bin =
-            std::unordered_map<std::string, Target>{
-                {file,
-                 Target{
-                     .sources = std::vector<std::string>{fs::absolute(fs::path(file)).string()},
-                     .include_dirs = std::vector<std::string>{cache.string()},
-                     .flags = std::vector<std::string>{"-g", "-fsanitize=address,undefined"},
-                     .link_flags = std::vector<std::string>{"-fsanitize=address,undefined"},
-                 }}},
-    };
+    const fs::path output_dir = cache / "bin";
+    const fs::path output = output_dir / fs::path(file).filename().stem();
+    fs::create_directories(output_dir);
 
-    const fs::path output = cache / "bin" / fs::path(file).filename().stem();
+    if (not fs::exists(output) or fs::last_write_time(file) > fs::last_write_time(output)) {
+        spdlog::info("compiling {:?}", file);
+        std::vector<std::string> flags = {"-g", "-fsanitize=address,undefined", "-I" + cache.string()};
+        auto cmd = fmt::format("{} {} {} -o {}", "c++ -std=c++23", fmt::join(flags, " "), file, output.string());
+        if (int res = WEXITSTATUS(std::system(cmd.c_str())); res != 0)
+            return cppxx::unexpected_errorf("Failed to build {:?} with command {:?} return code {}", output.string(), cmd, res);
+    }
 
-    return generate_compile_commands(w, file)
-        .and_then([&](CompileCommands &&ccs) { return build(std::move(ccs), 1, output.string()); })
-        .and_then([&]() -> std::expected<void, std::runtime_error> {
-            const std::string cmd = fmt::format("{} {}", output.string(), fmt::join(args, " "));
-            spdlog::info("running {:?}", cmd);
-
-            if (int res = WEXITSTATUS(std::system(cmd.c_str())); res != 0)
-                return cppxx::unexpected_errorf("{:?} exited with return code {}", file, res);
-            else
-                return {};
-        });
+    const std::string cmd = fmt::format("{} {}", output.string(), fmt::join(args, " "));
+    spdlog::info("running {:?}", cmd);
+    if (int res = WEXITSTATUS(std::system(cmd.c_str())); res != 0)
+        return cppxx::unexpected_errorf("{:?} exited with return code {}", file, res);
+    else
+        return {};
 }
