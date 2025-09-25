@@ -1,9 +1,9 @@
 #ifndef CPPXX_SQL_SQLITE3_H
 #define CPPXX_SQL_SQLITE3_H
 
-#include <fmt/ranges.h>
 #include "../sql.h"
 #include <sqlite3.h>
+#include <stdexcept>
 
 
 namespace cppxx::sql::sqlite3::detail {
@@ -69,6 +69,7 @@ namespace cppxx::sql::sqlite3::detail {
 
 
 namespace cppxx::sql::sqlite3 {
+    template <tuple_like Row>
     class Rows {
     public:
         Rows(struct sqlite3 *db, sqlite3_stmt *stmt)
@@ -83,18 +84,20 @@ namespace cppxx::sql::sqlite3 {
             ret = sqlite3_step(stmt);
             if (ret != SQLITE_DONE and ret != SQLITE_ROW) {
                 std::string what = sqlite3_errmsg(db);
-                throw std::runtime_error(fmt::format("Failed to step: {} - {}", what, ret));
+                std::string msg = "Failed to step: " + std::to_string(ret) + ": " + what;
+                throw std::runtime_error(msg);
             }
         }
 
-        template <typename... Types>
-        std::tuple<std::optional<Types>...> get() const {
-            if (ret != SQLITE_ROW)
-                throw std::runtime_error("Not a row");
+        auto get() const {
+            if (ret != SQLITE_ROW) {
+                std::string msg = "Failed to get row data: not a row";
+                throw std::runtime_error(msg);
+            }
 
             return [this]<size_t... I>(std::index_sequence<I...>) {
-                return std::make_tuple(detail::get_one<Types>(stmt, int(I))...);
-            }(std::index_sequence_for<Types...>{});
+                return std::make_tuple(detail::get_one<std::tuple_element_t<I, Row>>(stmt, int(I))...);
+            }(std::make_index_sequence<std::tuple_size_v<Row>>());
         }
 
         bool is_done() const { return ret == SQLITE_DONE; }
@@ -108,35 +111,32 @@ namespace cppxx::sql::sqlite3 {
     class Connection : public cppxx::sql::Connection {
     public:
         Connection(const std::string &filename) {
-            fmt::println(stderr, "[DEBUG] Opening database: {:?}", filename);
             int ret = sqlite3_open(filename.c_str(), &db);
             if (ret != SQLITE_OK) {
                 std::string what = sqlite3_errmsg(db);
                 sqlite3_close(db);
-                throw std::runtime_error(fmt::format("Cannot open {:?}: {}", filename, what));
+                std::string msg = "Cannot open \"" + filename + "\": " + what;
+                throw std::runtime_error(msg);
             }
         }
 
-        template <literal S, typename... T>
-        Rows execute(const Statement<S, T...> statement) {
-            fmt::println(stderr, "[DEBUG] Executing statement: {:?} - {}", S.value, statement.placeholders);
-            int ret = sqlite3_prepare_v2(db, S.value, -1, &stmt, nullptr);
+        template <literal Stmt, tuple_like Params, tuple_like Row>
+        Rows<Row> execute(const Statement<Stmt, Params, Row> &statement) {
+            int ret = sqlite3_prepare_v2(db, Stmt.value, -1, &stmt, nullptr);
             if (ret != SQLITE_OK) {
                 std::string what = sqlite3_errmsg(db);
-                throw std::runtime_error(fmt::format("Failed to prepare statement {:?}: {}", S.value, what));
+                std::string msg = "Failed to prepare statement \"" + std::string(Stmt.value) + "\": " + what;
+                throw std::runtime_error(msg);
             }
 
             [this, &statement]<std::size_t... I>(std::index_sequence<I...>) {
-                (detail::bind_one(stmt, I + 1, std::get<I>(statement.placeholders)), ...);
-            }(std::index_sequence_for<T...>{});
+                (detail::bind_one(stmt, I + 1, std::get<I>(statement.params)), ...);
+            }(std::make_index_sequence<std::tuple_size_v<Params>>());
 
             return {db, stmt};
         }
 
-        ~Connection() override {
-            fmt::println(stderr, "[DEBUG] Closing database");
-            sqlite3_close(db);
-        }
+        ~Connection() override { sqlite3_close(db); }
 
     protected:
         struct sqlite3 *db;
