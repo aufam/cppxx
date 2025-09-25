@@ -1,8 +1,10 @@
 #include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
+#include <cppxx/error.h>
 #include <regex>
 #include <filesystem>
 #include "git.h"
+#include "system.h"
 
 namespace fs = std::filesystem;
 
@@ -51,9 +53,7 @@ static std::string normalize_git_url(const std::string &url) {
     return "https://github.com/" + url;
 }
 
-std::string Git::as_key() const {
-    return url + '@' + tag;
-}
+std::string Git::as_key() const { return url + '@' + tag; }
 
 std::expected<std::string, std::runtime_error> Git::clone(const std::string &cache) const {
     const std::string url = normalize_git_url(this->url);
@@ -68,8 +68,9 @@ std::expected<std::string, std::runtime_error> Git::clone(const std::string &cac
     spdlog::info("cloning {}@{}", host, tag);
     const std::string cmd = fmt::format("git -c advice.detachedHead=false clone --quiet --depth 1 --branch '{}' '{}' '{}'", tag,
                                         url, result_path.string());
-    if (int res = std::system(cmd.c_str()); res != 0)
-        return std::unexpected(std::runtime_error(fmt::format("Failed to clone repo from {}. Return code: {}", url, res)));
+
+    if (auto res = system(cmd); not res)
+        return cppxx::unexpected_errorf("Failed to clone repo from {:?}, {}", url, res.error().what());
 
     return result_path;
 }

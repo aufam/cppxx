@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <unordered_set>
 #include "workspace.h"
+#include "system.h"
 
 namespace fs = std::filesystem;
 
@@ -61,8 +62,8 @@ static auto populate_archive(const fs::path &cache, const std::string &uri_strin
             fs::create_directories(archive_dir);
             const std::string cmd = fmt::format("curl -sSfL -o '{}' '{}'", archive_path.string(), uri_string);
             spdlog::info("downloading {:?} to {:?}", uri_string, archive_path.string());
-            if (int res = std::system(cmd.c_str()); res != 0)
-                throw std::runtime_error(fmt::format("Failed to download archive from {:?}. Return code: {}", uri_string, res));
+            if (auto res = system(cmd); not res)
+                throw cppxx::errorf("Failed to download archive from {:?}, {}", uri_string, res.error().what());
         }
 
         return populate_archive(cache, archive_path.string());
@@ -85,9 +86,9 @@ static auto populate_archive(const fs::path &cache, const std::string &uri_strin
                 throw std::runtime_error(fmt::format("Unsupported archive type {:?}", uri_string));
             }
 
-            spdlog::info("[INFO] extracting {:?} to {:?}", uri_string, extract_dir.string());
-            if (int res = std::system(extract_cmd.c_str()); res != 0)
-                throw std::runtime_error(fmt::format("Failed to extract {:?}. Return code: {}", uri_string, res));
+            spdlog::info("extracting {:?} to {:?}", uri_string, extract_dir.string());
+            if (auto res = system(extract_cmd); not res)
+                throw cppxx::errorf("Failed to extract {:?}, {}", uri_string, res.error().what());
         }
 
         return populate_archive(cache, extract_path.string());

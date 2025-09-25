@@ -6,6 +6,7 @@
 #include <filesystem>
 #include "workspace.h"
 #include "options.h"
+#include "system.h"
 
 namespace fs = std::filesystem;
 
@@ -31,12 +32,7 @@ std::expected<void, std::runtime_error> build(CompileCommands &&ccs, int jobs, c
                 return cppxx::unexpected_errorf("Failed to compile {:?}: {}", cc.file, e.what());
             }
 
-            int status = std::system(("cd " + cc.directory + " && " + cc.command).c_str());
-            if (!WIFEXITED(status) or WEXITSTATUS(status) != 0) {
-                chan.terminate();
-                return cppxx::unexpected_errorf("Command {:?} did not exit normally. Return code: {}", cc.command, status);
-            }
-            return {};
+            return system("cd " + cc.directory + " && " + cc.command);
         };
 
     std::optional<std::runtime_error> err = std::nullopt;
@@ -55,8 +51,8 @@ std::expected<void, std::runtime_error> build(CompileCommands &&ccs, int jobs, c
     const auto cmd = fmt::format("{} {} {} -o {}", "c++", fmt::join(deps, " "), fmt::join(ccs.link_flags, " "), out);
 
     spdlog::info("building {}", out);
-    if (int res = std::system(cmd.c_str()); res != 0)
-        return cppxx::unexpected_errorf("Failed to build {:?} with command {:?} return code {}", out, cmd, res);
+    if (auto res = system(cmd); not res)
+        return cppxx::unexpected_errorf("Failed to build {:?}, {}", out, res.error().what());
 
     return {};
 }

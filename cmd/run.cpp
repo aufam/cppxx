@@ -4,6 +4,7 @@
 #include <filesystem>
 #include "workspace.h"
 #include "options.h"
+#include "system.h"
 
 namespace fs = std::filesystem;
 
@@ -25,15 +26,14 @@ std::expected<void, std::runtime_error> Run::exec() {
     if (not fs::exists(output) or fs::last_write_time(file) > fs::last_write_time(output)) {
         spdlog::info("compiling {:?}", file);
         std::vector<std::string> flags = {"-g", "-fsanitize=address,undefined", "-I" + cache.string()};
-        auto cmd = fmt::format("{} {} {} -o {}", "c++ -std=c++23", fmt::join(flags, " "), file, output.string());
-        if (int res = WEXITSTATUS(std::system(cmd.c_str())); res != 0)
-            return cppxx::unexpected_errorf("Failed to build {:?} with command {:?} return code {}", output.string(), cmd, res);
+
+        if (auto res = system(fmt::format("{} {} {} -o {}", "c++ -std=c++23", fmt::join(flags, " "), file, output.string())); not res)
+            return cppxx::unexpected_move(res);
     }
 
-    const std::string cmd = fmt::format("{} {}", output.string(), fmt::join(args, " "));
+    args.insert(args.begin(), output.string());
+    const std::string cmd = fmt::format("{}", fmt::join(args, " "));
     spdlog::info("running {:?}", cmd);
-    if (int res = WEXITSTATUS(std::system(cmd.c_str())); res != 0)
-        return cppxx::unexpected_errorf("{:?} exited with return code {}", file, res);
-    else
-        return {};
+
+    return system(cmd);
 }
