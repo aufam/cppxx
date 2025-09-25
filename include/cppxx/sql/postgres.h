@@ -11,6 +11,8 @@
 
 
 namespace cppxx::sql::postgres::detail {
+    using Bind = std::variant<std::string, const std::string *>;
+
     struct BoundVisitor {
         const char *operator()(const std::string &str) const { return str.data(); }
         const char *operator()(const std::string *str) const { return str->data(); }
@@ -31,13 +33,13 @@ namespace cppxx::sql::postgres::detail {
         return result;
     }
 
-    void bind_one(int value, std::variant<std::string, const std::string *> &bound) { bound = std::to_string(value); }
-    void bind_one(double value, std::variant<std::string, const std::string *> &bound) { bound = std::to_string(value); }
-    void bind_one(bool value, std::variant<std::string, const std::string *> &bound) { bound = value ? "true" : "false"; }
-    void bind_one(const std::string &value, std::variant<std::string, const std::string *> &bound) { bound = &value; }
-    void bind_one(std::nullptr_t, std::variant<std::string, const std::string *> &bound) { bound = nullptr; }
+    inline void bind_one(int value, Bind &bound) { bound = std::to_string(value); }
+    inline void bind_one(double value, Bind &bound) { bound = std::to_string(value); }
+    inline void bind_one(bool value, Bind &bound) { bound = value ? "true" : "false"; }
+    inline void bind_one(const std::string &value, Bind &bound) { bound = &value; }
+    inline void bind_one(std::nullptr_t, Bind &bound) { bound = nullptr; }
 
-    void bind_one(std::chrono::system_clock::time_point value, std::variant<std::string, const std::string *> &bound) {
+    inline void bind_one(std::chrono::system_clock::time_point value, Bind &bound) {
         std::time_t t = std::chrono::system_clock::to_time_t(value);
         char buf[64];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&t));
@@ -45,7 +47,7 @@ namespace cppxx::sql::postgres::detail {
     }
 
     template <typename T>
-    void bind_one(const std::optional<T> &value, std::variant<std::string, const std::string *> &bound) {
+    inline void bind_one(const std::optional<T> &value, Bind &bound) {
         value.has_value() ? bind_one(*value, bound) : bind_one(nullptr, bound);
     }
 
@@ -143,7 +145,7 @@ namespace cppxx::sql::postgres {
         Rows<Row> execute(const Statement<Stmt, Params, Row> &statement) {
             constexpr size_t N = std::tuple_size_v<Params>;
 
-            std::variant<std::string, const std::string *> binders[N];
+            Bind binders[N];
             const char *paramValues[N] = {};
             int paramLengths[N] = {};
             int paramFormats[N] = {}; // 0=text, 1=binary
