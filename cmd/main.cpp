@@ -11,36 +11,36 @@ int main(int argc, char **argv) {
     spdlog::set_default_logger(spdlog::stderr_color_mt("cppxx"));
     spdlog::set_pattern("[%^%l%$] %v");
 
-    std::string subcommand;
-    const std::vector<cppxx::cli::Option> opts = {
-        {.target = &subcommand,
-         .key_str = "subcommand",
-         .help = "Subcommand",
-         .is_positional = true,
-         .one_of = {"build", "run", "cc", "add", "schema"}}
-    };
+    enum struct Subcommand { build, run, compile_commands, add, schema };
 
-    cppxx::cli::parse("cppxx", std::min(2, argc), argv, opts);
+    struct Opts {
+        cppxx::cli::Tag<"subcommand,positional", Subcommand> subcommand;
+    } opts;
+
+    cppxx::cli::parse_tagged("cppxx", std::min(2, argc), argv, opts);
 
     auto argv0 = fmt::format("{} {}", argv[0], argv[1]);
     argv += 1;
     argv[0] = argv0.data();
     argc -= 1;
 
-    const auto res = cppxx::match<std::expected<void, std::runtime_error>>(
-        subcommand,
-        {
-            {"build",  [&]() { return Build("Build a target specified by cppxx.toml", argc, argv).exec(); }          },
-            {"run",    [&]() { return Run("Run a single cpp file", argc, argv).exec(); }                             },
-            {"cc",     [&]() { return GenerateCompileCommands("Generate compile_commands.json", argc, argv).exec(); }},
-            {"add",    [&]() { return Add("Add an archive or a git repository", argc, argv).exec(); }                },
-            {"schema", [&]() { return Schema("Generate json schema for cppxx.json", argc, argv).exec(); }            },
-    });
+    return cppxx::match<std::expected<void, std::runtime_error>>(
+               opts.subcommand(),
+               {
+                   {Subcommand::build,            [&]() { return Build("Build a target specified by cppxx.toml", argc, argv).exec(); }},
+                   {Subcommand::run,              [&]() { return Run("Run a single cpp file", argc, argv).exec(); }                   },
+                   {Subcommand::compile_commands,
+                    [&]() { return GenerateCompileCommands("Generate compile_commands.json", argc, argv).exec(); }                    },
+                   {Subcommand::add,              [&]() { return Add("Add an archive or a git repository", argc, argv).exec(); }      },
+                   {Subcommand::schema,           [&]() { return Schema("Generate json schema for cppxx.json", argc, argv).exec(); }  },
+    })
+        .transform_error([](std::runtime_error &&e) {
+            const std::string what = e.what();
+            spdlog::error(what);
 
-    if (not res) {
-        spdlog::error("{}", res.error().what());
-        return 1;
-    }
-
-    return 0;
+            std::regex re(R"(return code (\d+))");
+            std::smatch match;
+            return std::regex_search(what, match, re) ? std::stoi(match[1].str()) : -1;
+        })
+        .error_or(0);
 }
