@@ -3,6 +3,8 @@
 
 #include "../sql.h"
 #include <sqlite3.h>
+#include <string>
+#include <optional>
 #include <stdexcept>
 
 

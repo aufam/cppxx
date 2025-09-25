@@ -1,11 +1,7 @@
 #ifndef CPPXX_LITERAL_H
 #define CPPXX_LITERAL_H
 
-#include <cstdint>
 #include <optional>
-#include <string>
-#include <vector>
-#include "tuple.h"
 
 
 namespace cppxx {

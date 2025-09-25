@@ -2,6 +2,7 @@
 #define CPPXX_SQL_H
 
 #include "literal.h"
+#include "tuple.h"
 
 namespace cppxx::sql::detail {
     template <size_t i>
