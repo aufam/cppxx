@@ -33,17 +33,28 @@ std::expected<void, std::runtime_error> Run::exec() {
         return cppxx::unexpected_errorf("File {:?} is not readable", file);
 
     std::string additional_flags;
+    std::string compiler;
+    std::string standard;
+
     for (std::string line; std::getline(f, line);) {
         if (not line.starts_with("//"))
             break;
 
         std::string comment = strip(line.substr(2));
-        if (constexpr std::string_view key = "flags:"; comment.starts_with(key)) {
+        if (constexpr std::string_view key = "flags:"; comment.starts_with(key) && additional_flags.empty()) {
             additional_flags = strip(comment.substr(key.size()));
-            break;
+        } else if (constexpr std::string_view key = "compiler:"; comment.starts_with(key) && compiler.empty()) {
+            compiler = strip(comment.substr(key.size()));
+        } else if (constexpr std::string_view key = "standard:"; comment.starts_with(key) && standard.empty()) {
+            standard = strip(comment.substr(key.size()));
         }
     }
     f.close();
+
+    if (compiler.empty())
+        compiler = "c++";
+    if (standard.empty())
+        standard = "23";
 
     const fs::path output_dir = cache / "bin";
     const fs::path output = output_dir / fs::path(file).filename().stem();
@@ -53,7 +64,8 @@ std::expected<void, std::runtime_error> Run::exec() {
         spdlog::info("compiling {:?}", file);
         std::vector<std::string> flags = {additional_flags, "-g", "-fsanitize=address,undefined", "-I" + cache.string()};
 
-        if (auto res = system(fmt::format("{} {} {} -o {}", "c++ -std=c++23", fmt::join(flags, " "), file, output.string()));
+        if (auto res = system(
+                fmt::format("{} -std=c++{} {} {} -o {}", compiler, standard, fmt::join(flags, " "), file, output.string()));
             not res)
             return cppxx::unexpected_move(res);
     }
