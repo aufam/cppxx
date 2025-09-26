@@ -12,7 +12,7 @@
 
 
 namespace cppxx::sql::mysql::detail {
-    void free_binds(std::vector<MYSQL_BIND> &binds, bool is_result) {
+    inline void free_binds(std::vector<MYSQL_BIND> &binds, bool is_result) {
         for (auto &bind : binds) {
             if (is_result) {
                 free(bind.buffer);
@@ -61,19 +61,19 @@ namespace cppxx::sql::mysql::detail {
     void prepare_result_bind(MYSQL_BIND &bind);
 
     template <>
-    void prepare_result_bind<int>(MYSQL_BIND &bind) {
+    inline void prepare_result_bind<int>(MYSQL_BIND &bind) {
         bind.buffer_type = MYSQL_TYPE_LONG;
         bind.buffer = malloc(sizeof(int));
-        bind.is_null = new bool(false);
+        bind.is_null = new my_bool('\0');
         bind.length = nullptr;
     }
 
     template <>
-    void prepare_result_bind<std::string>(MYSQL_BIND &bind) {
+    inline void prepare_result_bind<std::string>(MYSQL_BIND &bind) {
         bind.buffer_type = MYSQL_TYPE_STRING;
-        bind.buffer = malloc(1024); // choose max expected size
+        bind.buffer = malloc(1024); // TODO: make it dynamic?
         bind.buffer_length = 1024;
-        bind.is_null = new bool(false);
+        bind.is_null = new my_bool('\0');
         bind.length = new unsigned long(0);
     }
 } // namespace cppxx::sql::mysql::detail
@@ -82,7 +82,7 @@ namespace cppxx::sql::mysql {
     template <tuple_like Row>
     class Rows {
     public:
-        Rows(MYSQL_STMT *stmt)
+        explicit Rows(MYSQL_STMT *stmt)
             : stmt(stmt) {
             bind_result();
             next();
@@ -95,10 +95,11 @@ namespace cppxx::sql::mysql {
         }
 
         void next() {
-            int ret = mysql_stmt_fetch(stmt);
-            if (ret == 0) {
+            if (result_binds.empty()) {
+                done = true;
+            } else if (int ret = mysql_stmt_fetch(stmt); ret == 0) {
                 done = false;
-            } else if (ret == MYSQL_NO_DATA || result_binds.empty()) {
+            } else if (ret == MYSQL_NO_DATA) {
                 done = true;
             } else {
                 unsigned int err = mysql_stmt_errno(stmt);
@@ -110,7 +111,7 @@ namespace cppxx::sql::mysql {
 
         auto get() const {
             if (done)
-                throw std::runtime_error("Not a row");
+                throw std::runtime_error("Failed to get row data: not a row");
             return [this]<size_t... I>(std::index_sequence<I...>) {
                 return std::make_tuple(detail::get_one<std::tuple_element_t<I, Row>>(result_binds[I])...);
             }(std::make_index_sequence<std::tuple_size_v<Row>>());
@@ -161,7 +162,7 @@ namespace cppxx::sql::mysql {
         }
 
         template <literal Stmt, tuple_like Params, tuple_like Row>
-        Rows<Row> execute(const Statement<Stmt, Params, Row> &statement) {
+        Rows<Row> operator()(const Statement<Stmt, Params, Row> &statement) {
             MYSQL_STMT *stmt = mysql_stmt_init(mysql);
             if (!stmt) {
                 throw std::runtime_error("mysql_stmt_init() failed");
@@ -172,7 +173,6 @@ namespace cppxx::sql::mysql {
                 unsigned int err = mysql_errno(mysql);
                 std::string msg =
                     "Failed to prepare statement `" + std::string(Stmt.value) + "`: " + std::to_string(err) + ": " + what;
-                mysql_close(mysql);
                 throw std::runtime_error(msg);
             }
 
@@ -185,7 +185,6 @@ namespace cppxx::sql::mysql {
                 unsigned int err = mysql_stmt_errno(stmt);
                 std::string what = mysql_stmt_error(stmt);
                 std::string msg = "Bind param failed: " + std::to_string(err) + ": " + what;
-                mysql_close(mysql);
                 detail::free_binds(param_binds, false);
                 throw std::runtime_error(msg);
             }
@@ -194,7 +193,6 @@ namespace cppxx::sql::mysql {
                 unsigned int err = mysql_stmt_errno(stmt);
                 std::string what = mysql_stmt_error(stmt);
                 std::string msg = "Execute failed: " + std::to_string(err) + ": " + what;
-                mysql_close(mysql);
                 detail::free_binds(param_binds, false);
                 throw std::runtime_error(msg);
             }
@@ -208,8 +206,6 @@ namespace cppxx::sql::mysql {
     protected:
         MYSQL *mysql;
     };
-
-
 } // namespace cppxx::sql::mysql
 
 #endif

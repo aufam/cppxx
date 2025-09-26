@@ -28,6 +28,16 @@ namespace cppxx::sql {
         virtual ~Connection() = default;
     };
 
+    /// Database rows abstract class
+    template <tuple_like Row>
+    class Rows {
+    public:
+        virtual void next() = 0;
+        virtual bool is_done() const = 0;
+        virtual Row get() const = 0;
+        virtual ~Rows() = default;
+    };
+
     /// SQL Statement
     template <literal Stmt, tuple_like Params = std::tuple<>, tuple_like Row = std::tuple<>>
     struct Statement {
@@ -39,8 +49,7 @@ namespace cppxx::sql {
 
         template <typename Other>
         constexpr auto operator+(const Other &other) const {
-            return Statement<stmt + Other::stmt,
-                             decltype(std::tuple_cat(params_type{}, typename Other::params_type{})),
+            return Statement<stmt + Other::stmt, decltype(std::tuple_cat(params_type{}, typename Other::params_type{})),
                              decltype(std::tuple_cat(row_type{}, typename Other::row_type{}))>{
                 std::tuple_cat(params, other.params)};
         }
@@ -96,17 +105,22 @@ namespace cppxx::sql {
             return *this + Statement<" where ">{} + condition;
         }
 
+        constexpr auto operator()() const { return *this + Statement<literal(" ()")>{}; }
+
         template <typename Col, typename... Cols>
         constexpr auto operator()(const Col &, const Cols &...) const {
-            return *this + Statement<literal(" (") + Col::name, std::tuple<typename Col::type>>{}
-            + (Statement<literal(", ") + Cols::name, std::tuple<typename Cols::type>>{} + ...) + Statement<")">{};
+            if constexpr (sizeof...(Cols) == 0) {
+                return *this + Statement<literal(" (") + Col::name, std::tuple<typename Col::type>>{} + Statement<")">{};
+            } else {
+                return *this + Statement<literal(" (") + Col::name, std::tuple<typename Col::type>>{}
+                + (Statement<literal(", ") + Cols::name, std::tuple<typename Cols::type>>{} + ...) + Statement<")">{};
+            }
         }
 
         constexpr auto values(const Params &params) const {
             return Statement<Stmt + literal(" values (") + detail::repeated_placeholders<std::tuple_size_v<Params>>::value
                                  + literal(")"),
-                             Params,
-                             Row>{params};
+                             Params, Row>{params};
         }
     };
 
@@ -169,8 +183,7 @@ namespace cppxx::sql {
         if constexpr (sizeof...(Cols) == 0) {
             return Statement<literal("select ") + Col::name, std::tuple<>, std::tuple<typename Col::type>>{};
         } else {
-            return Statement<literal("select ") + Col::name + ((literal(", ") + Cols::name) + ...),
-                             std::tuple<>,
+            return Statement<literal("select ") + Col::name + ((literal(", ") + Cols::name) + ...), std::tuple<>,
                              std::tuple<typename Col::type, typename Cols::type...>>{};
         }
     }();
